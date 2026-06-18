@@ -26,7 +26,7 @@ graph TD
     Arduino -- "Solenoid/Central Lock" --> Angklung[Angklung Fisik]
 
     %% Input Data Kamera
-    Detector[Program Hand Sign - Camera] -- "HTTP POST /api/sign-input" --> Backend
+    Detector[Program Hand Sign - Camera] -- "Raw TCP Socket (Port 9999)" --> Backend
 
     %% GUI Clients (WebSocket)
     Backend -- "WebSockets (Socket.io)" --> WebUI[Web UI - Browser Client]
@@ -39,13 +39,13 @@ graph TD
 ### Komponen Utama:
 1.  **Flask Backend (Python)**:
     *   Berperan sebagai *Single Source of Truth*. Mengelola komunikasi serial ke Arduino, memproses sinyal hand sign masuk, serta mengontrol logika *game state* dasar (seperti penyediaan data lagu).
-    *   Menggunakan **Flask-SocketIO** untuk komunikasi dua arah secara real-time dengan Web UI dan PyQt.
+    *   Menggunakan **Flask-SocketIO** untuk komunikasi dua arah secara real-time dengan Web UI/PyQt, dan menjalankan **Background Thread TCP Server** (pada Port `9999`) untuk mendengarkan kiriman data mentah dari modul kamera.
 2.  **Web UI (HTML/CSS/JS)**:
     *   Diakses lokal melalui web browser. Menggunakan `socket.io-client` untuk sinkronisasi nada dan skor secara real-time.
 3.  **PyQt Desktop UI (Python)**:
     *   GUI desktop berbasis Python Qt. Menggunakan `python-socketio` untuk bertindak sebagai WebSocket client yang terhubung ke Flask, memastikan fungsionalitasnya sama persis dengan Web UI.
 4.  **Hand Sign Detector (Camera Process)**:
-    *   Aplikasi kamera terpisah yang mendeteksi gerakan koordinat tangan dan mengirimkan nada terdeteksi ke backend melalui endpoint HTTP POST lokal (`/api/sign-input`).
+    *   Aplikasi kamera terpisah yang mendeteksi gerakan koordinat tangan dan mengirimkan nada terdeteksi secara langsung sebagai string mentah (misal: "C4\n") ke backend melalui koneksi **Raw TCP Socket** lokal (port `9999`).
 5.  **Arduino Controller**:
     *   Pengendali hardware pasif yang menerima sinyal ketukan nada dari Flask Backend melalui koneksi USB Serial (COM port) dan meneruskannya ke aktuator *central lock* angklung.
 
@@ -74,7 +74,7 @@ Dalam game bergenre ritme (Guitar Hero style), keakuratan *timing* visual sangat
 2.  GUI membaca file nada lagu (format waktu dan nama nada, misal: `{"time": 2.5, "note": "C4"}`).
 3.  GUI menjalankan animasi visual nada jatuh menuju garis target.
 4.  Ketika user membuat *hand sign* di depan kamera:
-    *   *Hand Sign Detector* mendeteksi nada (misal: "C4") -> mengirim POST ke Backend Flask -> Backend Flask mengirim perintah Serial ke Arduino -> Arduino memukul angklung C4 secara fisik.
+    *   *Hand Sign Detector* mendeteksi nada (misal: "C4") -> mengirimkan kode nada via TCP Socket ke Port 9999 Backend Flask -> Backend Flask mengirim perintah Serial ke Arduino -> Arduino memukul angklung C4 secara fisik.
     *   Di saat yang sama, Backend Flask mengirimkan event WebSocket `note_played` dengan payload `{"note": "C4", "source": "gesture"}` ke GUI.
 5.  GUI menerima event `note_played`, lalu memeriksa apakah ada nada "C4" visual yang sedang berada di area target deteksi (dalam batas waktu presisi, misalnya ±150ms).
     *   Jika **Ya**: Berikan efek visual "Hit", tambah skor, dan tingkatkan kombo.
