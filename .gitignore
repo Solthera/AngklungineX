@@ -1,0 +1,24 @@
+arc-1/
+.claude
+
+
+# Node/React
+angklunginex-app/node_modules/
+angklunginex-app/dist/
+angklunginex-app/.env
+angklunginex-app/.env.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+angklunginex-service/.venv/
+angklunginex-service/__pycache__/
+*.py[cod]
+*$py.class
+.env
+.pytest_cache/
+
+# OS
+.DS_Store
+Thumbs.db
