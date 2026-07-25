@@ -14,20 +14,20 @@ Ini adalah project pengembangan virtual angklung 3D untuk AngklungineX Arc-2. Te
 
 ## Pemetaan 14 Nada (Sesuai Arc-1)
 Sistem ini menggunakan 14 nada diatonis sesuai dengan hardware AngklungineX Arc-1:
-1. Sol Rendah (5.)
-2. La Rendah (6.)
-3. Ti Rendah (7.)
-4. Do (1)
-5. Re (2)
-6. Mi (3)
-7. Fa (4)
-8. Feast/Fis (4#)
-9. Sol (5)
-10. La (6)
-11. Ti (7)
-12. Do Tinggi (1')
-13. Re Tinggi (2')
-14. Mi Tinggi (3')
+1. Sol Rendah (5.) -> Node: `G-Object009`
+2. La Rendah (6.) -> Node: `G-Object018`
+3. Ti Rendah (7.) -> Node: `G-Object001`
+4. Do (1) -> Node: `G-Object002`
+5. Re (2) -> Node: `G-Object003`
+6. Mi (3) -> Node: `G-Object004`
+7. Fa (4) -> Node: `G-Object005`
+8. Feast/Fis (4#) -> Node: `G-Object006`
+9. Sol (5) -> Node: `G-Object007`
+10. La (6) -> Node: `G-Object008`
+11. Ti (7) -> Node: `G-Object010`
+12. Do Tinggi (1') -> Node: `G-Object011`
+13. Re Tinggi (2') -> Node: `G-Object013`
+14. Mi Tinggi (3') -> Node: `G-Object012`
 
 ---
 
