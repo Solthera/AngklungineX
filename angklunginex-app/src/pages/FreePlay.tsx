@@ -3,9 +3,32 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
 import { AngklungModel } from "../components/3d/AngklungModel";
 import { useKeyboardAngklung } from "../hooks/useKeyboardAngklung";
+import { useAngklungAudio } from "../hooks/useAngklungAudio";
+
+const NODE_TO_NOTE_MAP: Record<string, string> = {
+  'G-Object009': 'Sol Rendah (5.)',
+  'G-Object018': 'La Rendah (6.)',
+  'G-Object001': 'Ti Rendah (7.)',
+  'G-Object002': 'Do (1)',
+  'G-Object003': 'Re (2)',
+  'G-Object004': 'Mi (3)',
+  'G-Object005': 'Fa (4)',
+  'G-Object006': 'Fis (4#)',
+  'G-Object007': 'Sol (5)',
+  'G-Object008': 'La (6)',
+  'G-Object010': 'Ti (7)',
+  'G-Object011': 'Do Tinggi (1\')',
+  'G-Object013': 'Re Tinggi (2\')',
+  'G-Object012': 'Mi Tinggi (3\')'
+}
 
 export default function FreePlay() {
   const activeNotes = useKeyboardAngklung();
+  useAngklungAudio(activeNotes)
+
+  const activeNoteNames = Array.from(activeNotes).map(
+    (nodeId) => NODE_TO_NOTE_MAP[nodeId] || nodeId
+  );
 
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
@@ -15,6 +38,13 @@ export default function FreePlay() {
         <p>Gunakan keyboard untuk bermain:</p>
         <p><b>Q, W, E, R, T, 1, 2, 3, 4, 5, 6, 7, 8, 9</b></p>
         <Link to="/">Kembali ke Menu</Link>
+        <br />
+        <div style={{ marginTop: '1rem', padding: '0.5rem', background: '#eee', borderRadius: '4px', minHeight: '3rem' }}>
+          <strong>Nada Aktif: </strong>
+          <span style={{ color: '#d97706', fontWeight: 'bold' }}>
+            {activeNoteNames.length > 0 ? activeNoteNames.join(' + ') : 'Kosong'}
+          </span>
+        </div>
       </div>
 
       {/* 3D Canvas */}
