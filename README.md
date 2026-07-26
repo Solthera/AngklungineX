@@ -39,6 +39,7 @@ Fokus pada simulasi 3D model agar bisa dijalankan sesuai dengan inputan keyboard
 - Load model 14 angklung (`angklung.glb`) ke dalam browser
 - Buat logic pemetaan 14 tombol keyboard (`1-9` dan `Q,W,E,R,T`) ke 14 angklung
 - Buat animasi pukulan (goyang maju-mundur/rotasi) pada mesh angklung 3D ketika tombol ditekan
+- Integrasi audio (14 file `.wav`) yang dimainkan secara sinkron saat angklung 3D bergerak
 
 ### Phase 2: Integrasi Camera Tracking (Backend Python)
 Membuat feature baru agar 3D angklung bisa menerima inputan dari camera tracking secara *real-time*.
