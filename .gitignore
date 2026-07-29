@@ -8,6 +8,11 @@ recap.md
 # Node/React
 angklunginex-app/node_modules/
 angklunginex-app/dist/
+angklunginex-app/build/
+
+# Vite cache
+angklunginex-apps/node_modules/.vite/
+angklunginex-app/app/node_modules/.vite/
 angklunginex-app/.env
 angklunginex-app/.env.local
 npm-debug.log*
