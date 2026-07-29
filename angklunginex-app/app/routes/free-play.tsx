@@ -1,7 +1,7 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
-import { AngklungModel } from "../components/3d/AngklungModel";
+import { AngklungModel } from "../components/3D/AngklungModel";
 import { useKeyboardAngklung } from "../hooks/useKeyboardAngklung";
 import { useAngklungAudio } from "../hooks/useAngklungAudio";
 
