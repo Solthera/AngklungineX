@@ -1,20 +1,34 @@
 import { useEffect, useRef } from 'react';
+import solRendah from '~/assets/angklung-14-nada/Sol-rendah-(G).wav';
+import laRendah from '~/assets/angklung-14-nada/La-rendah-(A).wav';
+import tiRendah from '~/assets/angklung-14-nada/Ti-rendah-(B).wav';
+import doNote from '~/assets/angklung-14-nada/Do-(C).wav';
+import reNote from '~/assets/angklung-14-nada/Re-(D).wav';
+import miNote from '~/assets/angklung-14-nada/Mi-(E).wav';
+import faNote from '~/assets/angklung-14-nada/Fa-(F).wav';
+import fisNote from '~/assets/angklung-14-nada/Fis-(F-sharp).wav';
+import solNote from '~/assets/angklung-14-nada/Sol-(G).wav';
+import laNote from '~/assets/angklung-14-nada/La-(A).wav';
+import tiNote from '~/assets/angklung-14-nada/Ti-(B).wav';
+import doTinggi from '~/assets/angklung-14-nada/Do-tinggi-(C).wav';
+import reTinggi from '~/assets/angklung-14-nada/Re-tinggi-(D).wav';
+import miTinggi from '~/assets/angklung-14-nada/Mi-tinggi-(E).wav';
 
 const AUDIO_MAP: Record<string, string> = {
-  'G-Object009': '/angklung-14-nada/Sol-rendah-(G).wav',
-  'G-Object018': '/angklung-14-nada/La-rendah-(A).wav',
-  'G-Object001': '/angklung-14-nada/Ti-rendah-(B).wav',
-  'G-Object002': '/angklung-14-nada/Do-(C).wav',
-  'G-Object003': '/angklung-14-nada/Re-(D).wav',
-  'G-Object004': '/angklung-14-nada/Mi-(E).wav',
-  'G-Object005': '/angklung-14-nada/Fa-(F).wav',
-  'G-Object006': '/angklung-14-nada/Fis-(F-sharp).wav',
-  'G-Object007': '/angklung-14-nada/Sol-(G).wav',
-  'G-Object008': '/angklung-14-nada/La-(A).wav',
-  'G-Object010': '/angklung-14-nada/Ti-(B).wav',
-  'G-Object011': '/angklung-14-nada/Do-tinggi-(C).wav',
-  'G-Object013': '/angklung-14-nada/Re-tinggi-(D).wav',
-  'G-Object012': '/angklung-14-nada/Mi-tinggi-(E).wav'
+  'G-Object009': solRendah,
+  'G-Object018': laRendah,
+  'G-Object001': tiRendah,
+  'G-Object002': doNote,
+  'G-Object003': reNote,
+  'G-Object004': miNote,
+  'G-Object005': faNote,
+  'G-Object006': fisNote,
+  'G-Object007': solNote,
+  'G-Object008': laNote,
+  'G-Object010': tiNote,
+  'G-Object011': doTinggi,
+  'G-Object013': reTinggi,
+  'G-Object012': miTinggi
 }
 
 export function useAngklungAudio(activeNotes: Set<string>) {

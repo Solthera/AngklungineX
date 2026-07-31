@@ -8,6 +8,7 @@ import { useRef, useEffect } from 'react'
 import { useGLTF } from '@react-three/drei'
 import type { GLTF } from 'three-stdlib'
 import { useFrame } from '@react-three/fiber'
+import angklungModelUrl from '~/assets/models/angklung.glb'
 
 type GLTFResult = GLTF & {
   nodes: {
@@ -23,7 +24,7 @@ interface AngklungProps {
 }
 
 export function AngklungModel({ activeNotes, ...props }: AngklungProps & React.JSX.IntrinsicElements['group']) {
-  const { nodes, materials } = useGLTF('/models/angklung.glb') as unknown as GLTFResult;
+  const { nodes, materials } = useGLTF(angklungModelUrl) as unknown as GLTFResult;
   
   // Referensi untuk menyimpan grup pembungkus (Pivot Wrapper)
   const pivotWrappers = useRef<Record<string, THREE.Group>>({});
@@ -124,4 +125,4 @@ export function AngklungModel({ activeNotes, ...props }: AngklungProps & React.J
   )
 }
 
-useGLTF.preload('/models/angklung.glb')
+useGLTF.preload(angklungModelUrl)
