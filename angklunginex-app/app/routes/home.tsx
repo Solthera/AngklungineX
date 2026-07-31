@@ -6,7 +6,7 @@ export default function Home() {
       <h1>AngklungineX Arc-2</h1>
       <nav>
         <ul>
-          <li><Link to="/free-play">Mode Free Play</Link></li>
+          <li className="text-blue-500"><Link to="/free-play">Mode Free Play</Link></li>
         </ul>
       </nav>
     </div>
