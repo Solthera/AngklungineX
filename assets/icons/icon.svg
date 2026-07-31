@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="64" fill="#1a1a2e"/>
+  <g transform="translate(256,280)">
+    <!-- Angklung frame -->
+    <rect x="-80" y="-160" width="160" height="240" rx="12" fill="#d4a373" stroke="#b8864e" stroke-width="6"/>
+    <!-- Angklung tubes -->
+    <rect x="-60" y="-140" width="36" height="200" rx="6" fill="#f0d9b5" stroke="#b8864e" stroke-width="4"/>
+    <rect x="-12" y="-120" width="36" height="180" rx="6" fill="#e8c99b" stroke="#b8864e" stroke-width="4"/>
+    <rect x="36" y="-100" width="36" height="160" rx="6" fill="#dbb98a" stroke="#b8864e" stroke-width="4"/>
+    <!-- Top bar -->
+    <rect x="-90" y="-170" width="180" height="24" rx="8" fill="#b8864e"/>
+    <!-- Vibrate lines -->
+    <path d="M-100,-40 Q-120,-50 -100,-60" stroke="#e94560" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.7"/>
+    <path d="M-110,-20 Q-130,-30 -110,-40" stroke="#e94560" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.5"/>
+    <path d="M-105,0 Q-125,-10 -105,-20" stroke="#e94560" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.3"/>
+    <!-- X letter -->
+    <text x="256" y="420" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="64" fill="#e94560">X</text>
+  </g>
+</svg>
