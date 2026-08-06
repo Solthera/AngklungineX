@@ -1,9 +1,9 @@
 import { Link } from "react-router";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Environment } from "@react-three/drei";
-import { AngklungModel } from "../components/3D/AngklungModel";
-import { useKeyboardAngklung } from "../hooks/useKeyboardAngklung";
-import { useAngklungAudio } from "../hooks/useAngklungAudio";
+import { AngklungModel } from "../../components/3D/AngklungModel";
+import { useKeyboardAngklung } from "../../hooks/useKeyboardAngklung";
+import { useAngklungAudio } from "../../hooks/useAngklungAudio";
 
 const NODE_TO_NOTE_MAP: Record<string, string> = {
   'G-Object009': 'Sol Rendah (5.)',
