@@ -31,44 +31,55 @@ export function AngklungModel({ activeNotes, ...props }: AngklungProps & React.J
 
   useEffect(() => {
     const targetNodes = [
-      'G-Object009', 'G-Object018', 'G-Object001', 'G-Object002', 
-      'G-Object003', 'G-Object004', 'G-Object005', 'G-Object006', 
-      'G-Object007', 'G-Object008', 'G-Object010', 'G-Object011', 
+      'G-Object009', 'G-Object018', 'G-Object001', 'G-Object002',
+      'G-Object003', 'G-Object004', 'G-Object005', 'G-Object006',
+      'G-Object007', 'G-Object008', 'G-Object010', 'G-Object011',
       'G-Object013', 'G-Object012'
     ];
 
-    // Seberapa jauh ke atas titik putarnya mau dipindah? (dalam unit 3D)
-    // Silakan bereksperimen dengan angka ini jika titik tumpunya terlalu tinggi/rendah
-    const pivotOffsetY = 0.5; 
+    const pivotOffsetY = 0.5;
+    const originalParents: Record<string, THREE.Object3D> = {};
+    const originalPositions: Record<string, THREE.Vector3> = {};
 
     targetNodes.forEach((nodeName) => {
       const node = nodes[nodeName];
       if (node && !pivotWrappers.current[nodeName]) {
-        // A. Buat Grup Baru (Pivot Wrapper)
         const wrapper = new THREE.Group();
-        
-        // B. Set posisi wrapper di posisi angklung saat ini DITAMBAH offset ke atas
+
+        originalParents[nodeName] = node.parent!;
+        originalPositions[nodeName] = node.position.clone();
+
         wrapper.position.copy(node.position);
         wrapper.position.y += pivotOffsetY;
 
-        // C. Ambil angklung dari parent lamanya (Scene)
         const parent = node.parent;
         if (parent) {
           parent.remove(node);
           parent.add(wrapper);
         }
-        
-        // D. Masukkan angklung ke dalam wrapper
-        wrapper.add(node);
-        
-        // E. Karena sekarang angklung ada di dalam wrapper, 
-        // kita reset posisinya menjadi MINUS offset agar tidak bergeser secara visual.
-        node.position.set(0, -pivotOffsetY, 0);
 
-        // F. Simpan wrapper ke dalam referensi agar bisa diakses di useFrame
+        wrapper.add(node);
+        node.position.set(0, -pivotOffsetY, 0);
         pivotWrappers.current[nodeName] = wrapper;
       }
     });
+
+    return () => {
+      // kembalikan node ke parent & posisi asli agar mount berikutnya bersih
+      targetNodes.forEach((nodeName) => {
+        const wrapper = pivotWrappers.current[nodeName];
+        const node = nodes[nodeName];
+        const origParent = originalParents[nodeName];
+        const origPos = originalPositions[nodeName];
+        if (wrapper && node && origParent && origPos) {
+          wrapper.remove(node);
+          origParent.remove(wrapper);
+          origParent.add(node);
+          node.position.copy(origPos);
+        }
+      });
+      pivotWrappers.current = {};
+    };
   }, [nodes]);
 
   useFrame((state) => {
