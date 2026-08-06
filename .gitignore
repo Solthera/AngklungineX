@@ -1,9 +1,9 @@
-arc-1/
-.claude
-docs/superpowers
-.superpowers
+# ── Repo umum ──
+.claude/
+.superpowers/
 CLAUDE.md
 recap.md
+docs/superpowers/
 
 # Node/React
 angklunginex-app/node_modules/
@@ -11,8 +11,6 @@ angklunginex-app/dist/
 angklunginex-app/build/
 
 # Vite cache
-angklunginex-apps/node_modules/.vite/
-angklunginex-app/app/node_modules/.vite/
 angklunginex-app/.env
 angklunginex-app/.env.local
 npm-debug.log*
@@ -21,11 +19,17 @@ yarn-error.log*
 
 # Python
 angklunginex-service/.venv/
-angklunginex-service/__pycache__/
+angklunginex-service/**/__pycache__/
 *.py[cod]
 *$py.class
 .env
 .pytest_cache/
+
+# Training data mentah (video + CSV + model hasil retrain) — regenerable via scripts di data/training/
+# Track hanya scripts-nya, ignore data besar & artefak turunan
+angklunginex-service/data/training/videos/
+angklunginex-service/data/training/datasets/
+angklunginex-service/data/training/artifacts/
 
 # OS
 .DS_Store
