@@ -5,3 +5,4 @@ pyserial
 numpy
 pandas
 seaborn
+websockets
