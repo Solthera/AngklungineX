@@ -9,8 +9,78 @@ Ini adalah project pengembangan virtual angklung 3D untuk AngklungineX Arc-2. Te
 
 ## Tech Stack
 - **Camera Tracking**: Python, MediaPipe
-- **Backend**: Python (mengirim data tracking ke frontend)
+- **Backend**: Python (mengirim data tracking ke frontend via WebSocket)
 - **Frontend**: Vite, React Router, TypeScript, Three.js (menampilkan 14 angklung 3D)
+
+---
+
+## Setup & Instalasi
+
+### Prerequisites
+- Node.js >= 18
+- Python >= 3.9
+- pip
+
+---
+
+### 1. Frontend (`angklunginex-app`)
+
+```bash
+cd angklunginex-app
+npm install
+npm run dev
+```
+
+App berjalan di `http://localhost:5173`.
+
+---
+
+### 2. Service (`angklunginex-service`)
+
+#### Install dependencies
+
+```bash
+cd angklunginex-service
+pip install -r requirements.txt
+```
+
+#### Jalankan service
+
+```bash
+python main.py
+```
+
+Secara default service berjalan di `ws://localhost:8765`.
+
+**Opsi:**
+```bash
+python main.py --host 0.0.0.0 --port 8765
+```
+
+#### Catatan
+- Mode **Keyboard** tidak memerlukan service — frontend bisa langsung dipakai
+- Mode **Camera** memerlukan service berjalan terlebih dahulu
+- Pastikan model tersedia di `angklunginex-service/models/`:
+  - `model_kodaly_v2.pkl`
+  - `hand_landmarker.task` (hanya untuk MediaPipe Tasks API v1.0.0+)
+
+---
+
+### Urutan Menjalankan (Mode Camera)
+
+1. Jalankan service Python:
+   ```bash
+   cd angklunginex-service && python main.py
+   ```
+2. Jalankan frontend:
+   ```bash
+   cd angklunginex-app && npm run dev
+   ```
+3. Buka `http://localhost:5173/free-play`
+4. Pilih input **Camera** di panel kanan
+5. Izinkan akses kamera di browser
+
+---
 
 ## Pemetaan 14 Nada (Sesuai Arc-1)
 Sistem ini menggunakan 14 nada diatonis sesuai dengan hardware AngklungineX Arc-1:

@@ -20,7 +20,7 @@ export default function Splat() {
       </p>
 
       <p className="mt-6 text-gray-500 dark:text-gray-400 max-w-xs">
-        Nada yang kamu cari nggak ada di sini. Yuk balik ke menu utama.
+        url yang kamu cari nggak ada di sini. Yuk balik ke menu utama.
       </p>
 
       <Link
