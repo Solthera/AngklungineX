@@ -1,0 +1,27 @@
+services:
+  app:
+    build:
+      context: ./angklunginex-app
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+    depends_on:
+      - service
+    networks:
+      - angklunginex-net
+
+  service:
+    build:
+      context: ./angklunginex-service
+    ports:
+      - "8765:8765"
+    networks:
+      - angklunginex-net
+    # Required for device access if using serial ports or camera (optional)
+    # devices:
+    #   - "/dev/video0:/dev/video0"
+
+networks:
+  angklunginex-net:
+    driver: bridge
