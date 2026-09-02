@@ -33,8 +33,8 @@ try:
     except ImportError:
         _has_solutions = False
 except ImportError:
-        import mediapipe as mp
-        _has_solutions = True
+    import mediapipe as mp
+    _has_solutions = True
 
 
 def _normalize_landmarks(landmarks):
@@ -159,6 +159,14 @@ def _reject(websocket, token_env):
     return not secrets.compare_digest(provided, token_env)
 
 
+def _process_request(connection, request):
+    """Fix proxy compatibility: Cloudflare Tunnel menyisipkan Connection: keep-alive."""
+    conn_val = request.headers.get("Connection", "")
+    if "upgrade" not in conn_val.lower():
+        request.headers["Connection"] = "Upgrade, " + conn_val if conn_val else "Upgrade"
+    return None
+
+
 async def run(host="localhost", port=8765, base_dir=None):
     if base_dir is None:
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -169,7 +177,6 @@ async def run(host="localhost", port=8765, base_dir=None):
     async def _handler(websocket):
         if _reject(websocket, token_env):
             print("[ws] koneksi ditolak: token salah / tidak ada")
-            # Beri jeda kecil agar handshake selesai secara bersih bagi proxy/Cloudflare Tunnel
             await asyncio.sleep(0.05)
             await websocket.close(code=1008, reason="unauthorized")
             return
@@ -177,5 +184,5 @@ async def run(host="localhost", port=8765, base_dir=None):
 
     print(f"[ws] server jalan di ws://{host}:{port}"
           + ("  (auth: WS_TOKEN aktif)" if token_env else "  (auth: nonaktif)"))
-    async with websockets.serve(_handler, host, port):
+    async with websockets.serve(_handler, host, port, process_request=_process_request):
         await asyncio.Future()  # jalan selamanya
