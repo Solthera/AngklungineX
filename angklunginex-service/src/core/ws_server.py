@@ -33,8 +33,8 @@ try:
     except ImportError:
         _has_solutions = False
 except ImportError:
-    import mediapipe as mp
-    _has_solutions = True
+        import mediapipe as mp
+        _has_solutions = True
 
 
 def _normalize_landmarks(landmarks):
@@ -169,6 +169,8 @@ async def run(host="localhost", port=8765, base_dir=None):
     async def _handler(websocket):
         if _reject(websocket, token_env):
             print("[ws] koneksi ditolak: token salah / tidak ada")
+            # Beri jeda kecil agar handshake selesai secara bersih bagi proxy/Cloudflare Tunnel
+            await asyncio.sleep(0.05)
             await websocket.close(code=1008, reason="unauthorized")
             return
         await handler(websocket)
