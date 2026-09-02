@@ -8,13 +8,14 @@ import { CameraOff } from 'lucide-react';
 import { BadgeInfoPanel } from "./components/badge"
 import { GestureInfo } from "./components/gesture-info";
 import { AngklungScene } from "./components/AngklungScene";
+import { AccessCodeGate } from "~/components/AccessCodeGate";
 
 export default function angklung() {
   const [showGesture, setShowGesture] = useState(false)
   const [cameraOn, setCameraOn] = useState(false)
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>()
   const { videoRef, cameraError, devices } = useCamera(cameraOn, selectedDeviceId)
-  const { gesture, canvasRef } = useGestureWs(videoRef, cameraOn)
+  const { gesture, authDenied, canvasRef, submitAccessCode } = useGestureWs(videoRef, cameraOn)
 
   const activeNotes = useMemo(() => {
     const node = gesture.label ? LABEL_TO_NODE[gesture.label] : undefined
@@ -45,6 +46,9 @@ export default function angklung() {
         <div className="absolute inset-0 z-10 flex items-center justify-center text-sm font-mono text-red-500">
           {cameraError}
         </div>
+      )}
+      {cameraOn && authDenied && (
+        <AccessCodeGate onSubmit={submitAccessCode} />
       )}
       {showGesture && (
         <div className="absolute top-4 right-4 z-10">

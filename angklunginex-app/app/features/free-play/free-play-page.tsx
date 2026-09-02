@@ -4,6 +4,7 @@ import { useAngklungAudio } from "~/hooks/useAngklungAudio";
 import { useKeyboardAngklung } from "~/hooks/useKeyboardAngklung";
 import { LABEL_TO_NODE } from "~/lib/angklung";
 import { WS_URL } from "~/constants";
+import { AccessCodeGate } from "~/components/AccessCodeGate";
 import { useCamera } from "../../hooks/useCamera";
 import { useGestureWs } from "../../hooks/useGestureWs";
 import { CameraView } from "./components/CameraView";
@@ -20,7 +21,10 @@ export default function FreePlayPage() {
   const isCameraMode = inputMode === "camera";
 
   const { videoRef, cameraError } = useCamera(isCameraMode);
-  const { gesture, wsStatus, canvasRef } = useGestureWs(videoRef, isCameraMode);
+  const { gesture, wsStatus, authDenied, canvasRef, submitAccessCode } = useGestureWs(
+    videoRef,
+    isCameraMode
+  );
   const cameraActiveNotes = new Set<string>(
     gesture.label && LABEL_TO_NODE[gesture.label] ? [LABEL_TO_NODE[gesture.label]] : []
   );
@@ -45,6 +49,9 @@ export default function FreePlayPage() {
           />
         ) : (
           <AngklungStage activeNotes={keyboardActiveNotes} />
+        )}
+        {authDenied && (
+          <AccessCodeGate onSubmit={submitAccessCode} />
         )}
       </div>
 

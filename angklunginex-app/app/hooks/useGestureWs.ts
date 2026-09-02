@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { WS_URL, CAPTURE_INTERVAL_MS } from "~/constants";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { CAPTURE_INTERVAL_MS } from "~/constants";
+import { buildWsUrl, getWsToken, saveWsToken } from "~/lib/wsAccess";
 
 export type GestureResult = {
   label: string | null;
@@ -12,29 +13,21 @@ export function useGestureWs(videoRef: React.RefObject<HTMLVideoElement | null>,
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [gesture, setGesture] = useState<GestureResult>({ label: null, confidence: 0 });
   const [wsStatus, setWsStatus] = useState<WsStatus>("disconnected");
+  const [authDenied, setAuthDenied] = useState(false);
+  const [attempt, setAttempt] = useState(0); // naikkan untuk reconnect dengan token baru
 
   useEffect(() => {
     if (!enabled) {
       setGesture({ label: null, confidence: 0 });
       setWsStatus("disconnected");
+      setAuthDenied(false);
       return;
     }
 
-    const ws = new WebSocket(WS_URL);
+    setAuthDenied(false);
     setWsStatus("connecting");
 
-    ws.onopen = () => setWsStatus("connected");
-    ws.onclose = () => setWsStatus("disconnected");
-    ws.onerror = () => setWsStatus("disconnected");
-
-    ws.onmessage = (e) => {
-      try {
-        setGesture(JSON.parse(e.data));
-      } catch {
-        // abaikan frame rusak
-      }
-    };
-
+    const ws = new WebSocket(buildWsUrl(getWsToken()));
     const interval = setInterval(() => {
       if (ws.readyState !== WebSocket.OPEN) return;
       const video = videoRef.current;
@@ -50,12 +43,35 @@ export function useGestureWs(videoRef: React.RefObject<HTMLVideoElement | null>,
       ws.send(b64);
     }, CAPTURE_INTERVAL_MS);
 
+    ws.onopen = () => setWsStatus("connected");
+    ws.onclose = (e) => {
+      if (e.code === 1008) setAuthDenied(true); // token salah / tidak ada
+      setWsStatus("disconnected");
+    };
+    ws.onerror = () => {
+      /* onclose menyusul; jangan set status dua kali */
+    };
+
+    ws.onmessage = (e) => {
+      try {
+        setGesture(JSON.parse(e.data));
+      } catch {
+        // abaikan frame rusak
+      }
+    };
+
     return () => {
       clearInterval(interval);
       ws.close();
     };
-  }, [enabled]);
+  }, [enabled, attempt]);
 
-  return { gesture, wsStatus, canvasRef };
+  /** Simpan access code lalu reconnect. Kosong = hapus token & coba tanpa token. */
+  const submitAccessCode = useCallback((code: string) => {
+    saveWsToken(code.trim());
+    setAuthDenied(false);
+    setAttempt((n) => n + 1);
+  }, []);
+
+  return { gesture, wsStatus, authDenied, canvasRef, submitAccessCode };
 }
-

@@ -16,11 +16,33 @@ services:
       context: ./angklunginex-service
     ports:
       - "8765:8765"
+    environment:
+      # Token akses WebSocket. Kosong/kosongkan = auth nonaktif (mode lokal/dev).
+      # Isi lewat file .env:  WS_TOKEN=s3cret  (jangan commit ke git).
+      - WS_TOKEN=${WS_TOKEN:-}
     networks:
       - angklunginex-net
     # Required for device access if using serial ports or camera (optional)
     # devices:
     #   - "/dev/video0:/dev/video0"
+
+  # Cloudflare Tunnel — ekspos service WebSocket (:8765) ke publik via
+  # hostname ws.angklunginex.farelfirdaus.site. Koneksi KELUAR ke edge CF,
+  # jadi tak perlu port-forward. Setup sekali:
+  #   docker run --rm -it cloudflare/cloudflared tunnel login
+  #   docker run --rm -it cloudflare/cloudflared tunnel create angklunginex-ws
+  #   docker run --rm -it cloudflare/cloudflared tunnel route dns angklunginex-ws ws.angklunginex.farelfirdaus.site
+  # Lalu beri token di .env:  TUNNEL_TOKEN=<hasil tunnel token ...>
+  # Sumber cert.json: ~/.cloudflared/*.json
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    container_name: cloudflared-angklunginex
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN:?set TUNNEL_TOKEN di .env}
+    networks:
+      - angklunginex-net
+    depends_on:
+      - service
 
 networks:
   angklunginex-net:

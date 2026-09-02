@@ -13,6 +13,9 @@ import base64
 import json
 import os
 import pickle
+import secrets
+from urllib.parse import parse_qs, urlsplit
+
 import numpy as np
 from collections import deque, Counter
 
@@ -140,11 +143,37 @@ def make_handler(model, conf_threshold=0.60, smoothing_frames=7):
     return handler
 
 
+def _env_token():
+    """Token akses dari environment. Kosong = auth nonaktif (mode lokal/dev)."""
+    return os.environ.get("WS_TOKEN", "").strip()
+
+
+def _reject(websocket, token_env):
+    """True bila klien tidak membawa token yang benar (WS_TOKEN aktif)."""
+    if not token_env:
+        return False
+    request = getattr(websocket, "request", None)
+    path = getattr(request, "path", "") or ""
+    query = parse_qs(urlsplit(path).query)
+    provided = (query.get("token") or [""])[0]
+    return not secrets.compare_digest(provided, token_env)
+
+
 async def run(host="localhost", port=8765, base_dir=None):
     if base_dir is None:
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     model = _load_model(base_dir)
+    token_env = _env_token()
     handler = make_handler(model)
-    print(f"[ws] server jalan di ws://{host}:{port}")
-    async with websockets.serve(handler, host, port):
+
+    async def _handler(websocket):
+        if _reject(websocket, token_env):
+            print("[ws] koneksi ditolak: token salah / tidak ada")
+            await websocket.close(code=1008, reason="unauthorized")
+            return
+        await handler(websocket)
+
+    print(f"[ws] server jalan di ws://{host}:{port}"
+          + ("  (auth: WS_TOKEN aktif)" if token_env else "  (auth: nonaktif)"))
+    async with websockets.serve(_handler, host, port):
         await asyncio.Future()  # jalan selamanya
