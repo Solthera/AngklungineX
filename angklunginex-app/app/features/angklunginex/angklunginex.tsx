@@ -12,15 +12,13 @@ export default function angklung() {
 
   return (
     <div className="relative isolate flex min-h-screen flex-col bg-[#EBEBEB]">
-      {cameraOn && (
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className="absolute inset-0 z-0 h-full w-full object-cover scale-x-[-1]"
-        />
-      )}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        className={`absolute inset-0 z-0 h-full w-full object-cover scale-x-[-1] ${cameraOn ? "opacity-100" : "opacity-0"}`}
+      />
       {!cameraOn && (
         <div className="relative z-10 flex flex-1 items-center justify-center">
           <CameraOff
