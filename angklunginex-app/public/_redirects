@@ -1,3 +1,0 @@
-# SPA fallback — semua rute tak dikenal disajikan index.html (React Router)
-# Cloudflare Pages: file ini ikut dicopy dari /public ke output build.
-/*    /index.html   200
