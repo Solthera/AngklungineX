@@ -15,11 +15,17 @@ export function MenuButton({
   onShowGestureChange,
   cameraOn,
   onCameraChange,
+  devices,
+  selectedDeviceId,
+  onDeviceChange,
 }: {
   showGesture: boolean
   onShowGestureChange: (checked: boolean) => void
   cameraOn: boolean
   onCameraChange: (checked: boolean) => void
+  devices: { deviceId: string; label: string }[]
+  selectedDeviceId?: string
+  onDeviceChange: (deviceId: string) => void
 }) {
   const [open, setOpen] = useState(false)
 
@@ -62,6 +68,23 @@ export function MenuButton({
               onCheckedChange={onCameraChange}
             />
           </div>
+
+          {cameraOn && devices.length > 0 && (
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm text-gray-500">Pilih kamera</span>
+              <select
+                value={selectedDeviceId ?? devices[0]?.deviceId ?? ""}
+                onChange={(e) => onDeviceChange(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm text-gray-700"
+              >
+                {devices.map((d) => (
+                  <option key={d.deviceId} value={d.deviceId}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="flex items-center justify-between">
             <span>Show gesture</span>

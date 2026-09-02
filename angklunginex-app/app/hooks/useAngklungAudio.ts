@@ -39,6 +39,7 @@ export function useAngklungAudio(activeNotes: Set<string>) {
     Object.entries(AUDIO_MAP).forEach(([nodeId, path]) => {
       const audio = new Audio(path);
       audio.preload = 'auto';
+      audio.loop = true; // loop selama nada aktif
       audioCache.current[nodeId] = audio;
     });
     return () => {
