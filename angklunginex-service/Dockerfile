@@ -2,13 +2,12 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install system dependencies for OpenCV and MediaPipe (including OpenGL/EGL)
+# Install system dependencies for OpenCV and MediaPipe (including OpenGL/EGL for Debian Trixie/Sid)
 RUN apt-get update && apt-get install -y \
     libgl1 \
     libglib2.0-0 \
     libegl1 \
-    libgles2-mesa \
-    libgl1-mesa-glx \
+    libgles2 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
