@@ -1,4 +1,4 @@
-import type { WsStatus } from "../hooks/useGestureWs";
+import type { WsStatus } from "../../../hooks/useGestureWs";
 
 const statusDot: Record<WsStatus, string> = {
   connecting: "bg-yellow-400 animate-pulse",
