@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node -e \"console.log('[debug] cwd=',process.cwd());console.log('[debug] VITE_WS_URL=',process.env.VITE_WS_URL||'(unset)');console.log('[debug] NODE_ENV=',process.env.NODE_ENV||'(unset)');const fs=require('fs');console.log('[debug] .env.production exists=',fs.existsSync('.env.production'))\" && react-router build",
+    "build": "react-router build",
     "dev": "react-router dev",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc"
