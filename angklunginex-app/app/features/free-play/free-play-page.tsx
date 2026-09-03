@@ -21,7 +21,7 @@ export default function FreePlayPage() {
   const isCameraMode = inputMode === "camera";
 
   const { videoRef, cameraError } = useCamera(isCameraMode);
-  const { gesture, wsStatus, authDenied, canvasRef, submitAccessCode } = useGestureWs(
+  const { gesture, wsStatus, authDenied, isError, canvasRef, submitAccessCode } = useGestureWs(
     videoRef,
     isCameraMode
   );
@@ -51,7 +51,12 @@ export default function FreePlayPage() {
           <AngklungStage activeNotes={keyboardActiveNotes} />
         )}
         {authDenied && (
-          <AccessCodeGate onSubmit={submitAccessCode} />
+          <AccessCodeGate
+            onSubmit={submitAccessCode}
+            onClose={() => setInputMode("keyboard")}
+            isError={isError}
+            isConnecting={wsStatus === "connecting"}
+          />
         )}
       </div>
 

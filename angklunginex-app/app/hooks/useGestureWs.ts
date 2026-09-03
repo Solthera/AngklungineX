@@ -14,6 +14,7 @@ export function useGestureWs(videoRef: React.RefObject<HTMLVideoElement | null>,
   const [gesture, setGesture] = useState<GestureResult>({ label: null, confidence: 0 });
   const [wsStatus, setWsStatus] = useState<WsStatus>("disconnected");
   const [authDenied, setAuthDenied] = useState(false);
+  const [isError, setIsError] = useState(false);
   const [attempt, setAttempt] = useState(0); // naikkan untuk reconnect dengan token baru
 
   useEffect(() => {
@@ -21,10 +22,10 @@ export function useGestureWs(videoRef: React.RefObject<HTMLVideoElement | null>,
       setGesture({ label: null, confidence: 0 });
       setWsStatus("disconnected");
       setAuthDenied(false);
+      setIsError(false);
       return;
     }
 
-    setAuthDenied(false);
     setWsStatus("connecting");
 
     const ws = new WebSocket(buildWsUrl(getWsToken()));
@@ -43,9 +44,17 @@ export function useGestureWs(videoRef: React.RefObject<HTMLVideoElement | null>,
       ws.send(b64);
     }, CAPTURE_INTERVAL_MS);
 
-    ws.onopen = () => setWsStatus("connected");
+    ws.onopen = () => {
+      setWsStatus("connected");
+      setAuthDenied(false);
+      setIsError(false);
+    };
+
     ws.onclose = (e) => {
-      if (e.code === 1008) setAuthDenied(true); // token salah / tidak ada
+      if (e.code === 1008) {
+        setAuthDenied(true); // token salah / tidak ada
+        if (attempt > 0) setIsError(true);
+      }
       setWsStatus("disconnected");
     };
     ws.onerror = () => {
@@ -69,9 +78,9 @@ export function useGestureWs(videoRef: React.RefObject<HTMLVideoElement | null>,
   /** Simpan access code lalu reconnect. Kosong = hapus token & coba tanpa token. */
   const submitAccessCode = useCallback((code: string) => {
     saveWsToken(code.trim());
-    setAuthDenied(false);
+    setIsError(false);
     setAttempt((n) => n + 1);
   }, []);
 
-  return { gesture, wsStatus, authDenied, canvasRef, submitAccessCode };
+  return { gesture, wsStatus, authDenied, isError, canvasRef, submitAccessCode };
 }

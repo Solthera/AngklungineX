@@ -15,7 +15,7 @@ export default function angklung() {
   const [cameraOn, setCameraOn] = useState(false)
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>()
   const { videoRef, cameraError, devices } = useCamera(cameraOn, selectedDeviceId)
-  const { gesture, authDenied, canvasRef, submitAccessCode } = useGestureWs(videoRef, cameraOn)
+  const { gesture, wsStatus, authDenied, isError, canvasRef, submitAccessCode } = useGestureWs(videoRef, cameraOn)
 
   const activeNotes = useMemo(() => {
     const node = gesture.label ? LABEL_TO_NODE[gesture.label] : undefined
@@ -48,7 +48,12 @@ export default function angklung() {
         </div>
       )}
       {cameraOn && authDenied && (
-        <AccessCodeGate onSubmit={submitAccessCode} />
+        <AccessCodeGate
+          onSubmit={submitAccessCode}
+          onClose={() => setCameraOn(false)}
+          isError={isError}
+          isConnecting={wsStatus === "connecting"}
+        />
       )}
       {showGesture && (
         <div className="absolute top-4 right-4 z-10">
