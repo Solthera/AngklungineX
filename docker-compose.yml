@@ -2,6 +2,7 @@ services:
   app:
     build:
       context: ./angklunginex-app
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
@@ -14,6 +15,7 @@ services:
   service:
     build:
       context: ./angklunginex-service
+    restart: unless-stopped
     ports:
       - "8765:8765"
     environment:
@@ -39,8 +41,9 @@ services:
     restart: unless-stopped
     container_name: cloudflared-angklunginex
     command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN:?set TUNNEL_TOKEN di .env}
-    networks:
-      - angklunginex-net
+    # WAJIB host network: ingress tunnel mengarah ke http://localhost:8765.
+    # Di bridge network, localhost = container sendiri -> connection refused (502).
+    network_mode: host
     depends_on:
       - service
 
