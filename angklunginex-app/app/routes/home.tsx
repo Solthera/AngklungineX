@@ -20,10 +20,10 @@ export default function Home() {
       {/* Menu */}
       <nav className="mt-10 flex flex-col gap-3 w-full max-w-xs">
         <Link
-          to="/free-play"
+          to="/angklunginex"
           className="w-full px-6 py-4 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold text-sm hover:opacity-80 transition-opacity"
         >
-          Mode Free Play
+          Play
         </Link>
       </nav>
 
