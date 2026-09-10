@@ -6,7 +6,7 @@ import { LABEL_TO_NODE, NODE_TO_LABEL } from "~/lib/angklung"
 import { MenuButton } from "./components/popup"
 import { CameraOff } from 'lucide-react';
 import { BadgeInfoPanel } from "./components/badge"
-import { GestureInfo } from "./components/gesture-info";
+import { GestureInfo } from "./components/hand-gesture-info";
 import { AngklungScene } from "./components/AngklungScene";
 import { AccessCodeGate } from "~/components/AccessCodeGate";
 
