@@ -8,6 +8,14 @@ Metode: pengukuran langsung terhadap situs live (curl timing + response
 header) dan pembedahan isi berkas biner (GLB, WAV). Semua angka di dokumen
 ini adalah **hasil ukur**, kecuali yang ditandai *(estimasi)*.
 
+> **Status per 2026-09-11:** S1, S2, dan S8 sudah dikerjakan dan di-merge ke
+> `development`. S3 **dibatalkan** — meshopt/Draco terbukti merusak animasi
+> angklung. Sisa: S4, S5, S6, S7, M8. Rincian di [Status](#status).
+
+> **Koreksi penting terhadap analisis awal:** penyebab utama ukuran GLB bukan
+> "terlalu banyak triangle", melainkan **83.3% isi berkas berupa 14× geometri
+> byte-identik** untuk unit angklung. Lihat bagian [S1](#s1-dedup--simplify-glb--dampak-terbesar--selesai).
+
 ---
 
 ## Ringkasan — Total Unduhan Pengunjung Baru ≈ 19 MB
@@ -157,61 +165,155 @@ adalah *decimation* + meshopt/Draco, bukan gzip.
 
 ## Solusi
 
-### S1. Decimate mesh GLB — dampak terbesar
+### S1. Dedup + simplify GLB — dampak terbesar ✅ SELESAI
 
-Target: 536K triangle → ~15–30K. Untuk model alat musik, 15K sudah mulus.
+> **Status:** dikerjakan 2026-09-11 di `perf/dedup-decimate-glb` (merge #6).
+> Pendekatan berubah dari rencana awal — baca koreksi di bawah.
+
+#### Koreksi: akar masalahnya bukan jumlah triangle
+
+Rencana awal hanya menyebut "536K triangle terlalu padat". Pembedahan accessor
+menunjukkan penyebab utamanya berbeda: **semua 14 mesh `G-Object` punya
+geometri byte-identik** (md5 POSITION & indices sama). Satu unit angklung
+disimpan 14 kali dalam satu berkas.
+
+| Isi GLB asli | Byte | % |
+|---|---:|---:|
+| Geometri 14× `G-Object` | 8.85 MB | **83.3%** |
+| Geometri lain (Cube/Cylinder) | 1.32 MB | 12.4% |
+| 2 tekstur PNG | 0.38 MB | 3.6% |
+| JSON + padding | 0.07 MB | <1% |
+
+Artinya `dedup` saja memangkas **~7.84 MB secara lossless**, sebelum satu pun
+triangle dibuang. Decimation jadi langkah kedua, bukan yang utama.
+
+#### Pipeline yang dipakai
 
 ```bash
-npx @gltf-transform/cli simplify \
-  app/assets/models/angklung.glb \
-  app/assets/models/angklung-simplified.glb \
-  --ratio 0.03 --error 0.001
+npx @gltf-transform/cli@4 optimize \
+  app/assets/models/angklung.glb /tmp/angklung-opt.glb \
+  --join false --flatten false --instance false \
+  --palette false --texture-compress false \
+  --compress false \
+  --simplify-ratio 0.1 --simplify-error 0.001
 ```
 
-Perkiraan hasil *(estimasi, berbasis scaling ukuran)*:
+`--join`/`--flatten` **wajib** dimatikan: keduanya menggabungkan node dan
+membakar transform ke geometri, yang akan mematikan animasi per-angklung.
+`--palette` juga dimatikan agar nama material tidak digabung.
 
-| Triangle | Estimasi GLB | Waktu load @400 KB/s |
+#### Hasil terukur
+
+| | Sebelum | Sesudah |
 |---|---:|---:|
-| 536K (sekarang) | 10.1 MB | **24–34 s** |
-| 54K (10%) | ~1.1 MB | ~2.7 s |
-| 16K (3%) | ~0.35 MB | **~1 s** |
-| 5K (1%) | ~0.15 MB | ~0.4 s |
+| Ukuran | 10.62 MB | **654 KB** (−93.8%) |
+| Triangle | 536,812 | 9,706 |
+| Mesh | 35 | 7 |
+| Accessor | 239 | 35 |
+| Material | 58 | 6 |
 
-### S2. Tambah `public/_headers`
+Penurunan material 58→6 adalah efek dedup yang **benar**: `Bamboo.001`..`.013`
+adalah duplikat konten yang semuanya menunjuk tekstur sama.
 
-Semua nama berkas sudah ber-hash konten (`angklung-BxmtjF1E.glb`,
-`Do-(C)-BAJ63vNS.wav`), sehingga aman di-cache selamanya.
+#### Kontrak yang dijaga (kode bergantung padanya)
 
-Buat `public/_headers`:
+`AngklungModel.tsx` bergantung pada nama node dan nama material di dalam GLB,
+sehingga keduanya tidak boleh berubah:
+
+- 35 nama node harus utuh (`G-Object.001`..`.018`; three.js membuang titiknya
+  jadi `G-Object001` — sudah disesuaikan kode).
+- Transform T/R/S per-node harus identik: 14 node punya skala berbeda
+  (0.068 → 0.046) yang membuat tiap tabung berputar di porosnya sendiri.
+- `Material.018` dan `Bamboo` direferensikan langsung di JSX dan harus tetap
+  ada namanya.
+
+**Verifikasi yang sudah dilakukan:** 35 nama node identik (tidak ada yang
+hilang/bertambah), transform T/R/S identik **diff=0 tanpa toleransi**,
+`Material.018` & `Bamboo` ada, dan parse headless via `three-stdlib`
+GLTFLoader (loader yang dipakai drei) menghasilkan 14 node
+`G-Object001`..`G-Object018`.
+
+**Belum diverifikasi:** animasi ayun secara visual di browser. Tidak ada
+headless browser di repositori, jadi penilaian ini menunggu pengujian manual
+(`npm run dev` → pastikan 14 angklung berayun saat nada dipicu).
+
+> Catatan: `--ratio 0.03` di rencana awal **tidak berlaku** dan tidak dipakai.
+> `simplify` berjalan pada mesh unik *setelah* dedup (36,778 tri), bukan pada
+> 536K total, sehingga rasio 0.03 berarti sesuatu yang jauh berbeda. Dipakai
+> `0.1` = ~3,700 tri per unit angklung — untuk model alat musik itu sudah mulus.
+
+### S2. Tambah `public/_headers` ✅ SELESAI
+
+> **Status:** dikerjakan 2026-09-11 di `perf/assets-cache-headers` (merge #8).
+
+Deployment terkonfirmasi **Cloudflare Pages** (output `build/client`), dan
+seluruh 51 berkas di `/assets/` terbukti ber-hash konten
+(`angklung-BxmtjF1E.glb`, `Do-(C)-BAJ63vNS.wav`). Karena hash berasal dari isi
+berkas, URL tidak akan pernah berubah isinya — aman di-cache selamanya.
+
+Dibuat `public/_headers`:
 
 ```
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 ```
 
-Efek: kunjungan kedua dan seterusnya menjadi instan, dan Cloudflare ikut
-meng-cache di edge (tidak lagi `DYNAMIC`).
+Pola `/assets/*` sengaja tidak mencakup `favicon.ico` dan `angklung.png`
+(berada di root, tanpa hash) — berkas tanpa hash memang tidak aman di-cache
+selamanya.
 
-> Ini memperbaiki M2 sekaligus — perubahan paling murah dengan dampak besar.
+**Verifikasi yang sudah dilakukan:** berkas tersalin ke `build/client/_headers`
+saat `npm run build` — lokasi yang dibaca Cloudflare Pages.
 
-### S3. Kompresi geometri — meshopt atau Draco
-
-Setelah decimation, kompres lagi:
+**Belum diverifikasi:** perubahan header sebenarnya (`cf-cache-status`
+`DYNAMIC` → `HIT`) baru muncul setelah deploy. Cara cek:
 
 ```bash
-npx @gltf-transform/cli optimize \
-  app/assets/models/angklung.glb \
-  app/assets/models/angklung-optimized.glb \
-  --compress meshopt --simplify 0.03
+curl -sI https://angklunginex.farelfirdaus.site/assets/angklung-BxmtjF1E.glb \
+  | grep -iE "cache-control|cf-cache-status"
 ```
 
-| Opsi | Kelebihan | Kekurangan |
-|---|---|---|
-| **meshopt** (`EXT_meshopt_compression`) | decode cepat (WASM), ukuran turun ~5–10× | — |
-| **Draco** | lebih kecil lagi | decode lebih lambat |
+### S3. Kompresi geometri — meshopt atau Draco ❌ DIBATALKAN
 
-Tambahan: **quantization** (`KHR_mesh_quantization`, POSITION/NORMAL/TEXCOORD
-→ 16-bit) menghemat ~50% lagi.
+> **Status:** dibatalkan. Rekomendasi di bagian ini **tidak boleh diikuti**.
+
+Rencana awal menyarankan `--compress meshopt` untuk menurunkan ukuran lagi.
+Setelah diuji, keduanya bermasalah untuk model ini:
+
+**meshopt merusak animasi.** Command `meshopt` di gltf-transform bukan
+kompresi murni — ia memanggil `quantize()` di dalamnya
+(`functions/src/meshopt.ts`). Dan `quantize()` **secara sengaja membakar skala
+mesh ke node** untuk menormalkan geometri ke rentang [-1,1]
+(`functions/src/quantize.ts`, fungsi `transformMeshParents`).
+
+Hasil terukur pada model ini: skala ke-14 node `G-Object` naik **~15.36×**
+seragam, translasi bergeser. Itu mematahkan `AngklungModel.tsx` yang
+hardcode `pivotOffsetY = 0.5` dengan asumsi skala node asli — angklung akan
+berayun meleset dari porosnya. **Tidak error, tapi animasinya rusak.**
+
+**Draco menjaga transform** (terverifikasi diff=0) dan hasilnya lebih kecil
+(435 KB vs 654 KB), tetapi:
+
+- Decode lebih lambat, dan `AngklungModel.tsx` akan butuh perubahan untuk
+  mengarahkan decoder (drei default mengambil decoder dari CDN `gstatic`).
+- Selisih 219 KB tidak sebanding dengan tambahan dependensi eksternal +
+  perubahan kode, mengingat target utama (10.6 MB → <1 MB) sudah tercapai
+  tanpa kompresi sama sekali.
+
+**Keputusan:** tidak memakai kompresi mesh. 654 KB sudah memadai.
+
+Bukti isolasi langkah (bisect) — hanya `meshopt` yang mengubah transform:
+
+| Langkah | Transform `G-Object` | Ukuran |
+|---|---|---:|
+| `dedup` | ✅ utuh | 1.35 MB |
+| `+ weld` | ✅ utuh | 1.36 MB |
+| `+ simplify 0.1` | ✅ utuh | 707 KB |
+| `+ meshopt` | ❌ rusak (skala ×15.36) | 473 KB |
+| `+ draco` (pengganti) | ✅ utuh | 435 KB |
+
+> Bila kelak tetap ingin kompresi mesh, gunakan **Draco**, bukan meshopt —
+> dan pastikan transform node diverifikasi tetap identik.
 
 ### S4. Konversi audio ke Opus / MP3
 
@@ -257,85 +359,132 @@ Dengan ini shell halaman tampil lebih dulu, aset 3D menyusul. Dampak pada
 Pertimbangkan `frameloop="demand"` pada `<Canvas>` (`AngklungScene.tsx:12-16`)
 untuk menghemat CPU/baterai saat tidak ada animasi berjalan.
 
-### S8. Bersihkan sisa
+### S8. Bersihkan sisa ✅ SELESAI (sebagian)
 
-```bash
-rm app/assets/models/Model.glb   # duplikat byte-identik, tidak direferensikan
-```
+> **Status:** penghapusan `Model.glb` dikerjakan 2026-09-11 di
+> `chore/remove-duplicate-glb` (merge #7). Entri usang di `tsconfig.json`
+> (M8) **belum** dikerjakan.
 
-Hapus juga entri path usang di `tsconfig.json` (M8).
+`Model.glb` dihapus setelah dipastikan tidak direferensikan di kode mana pun
+(diverifikasi via `grep` ke seluruh `*.ts/tsx/js/jsx/json/mjs`).
 
----
+> Koreksi terhadap M7: setelah S1, `Model.glb` **bukan lagi duplikat
+> byte-identik** dari `angklung.glb` — ia tersisa sebagai salinan original
+> 10 MB. Tetap aman dihapus karena backup-nya ada di riwayat git
+> (commit `714dc36` dan branch `development`).
 
-## Perkiraan Hasil Akhir
-
-| | Sekarang | Setelah |
-|---|---:|---:|
-| GLB | 10.1 MB | ~0.15–0.35 MB |
-| Audio | 4.63 MB | ~0.2 MB |
-| HDR | 1.5 MB | 0 (dihapus) / 1.5 MB lokal ter-cache |
-| **Total unduhan pertama** | **~19 MB** | **~0.5–1 MB** |
-| **Waktu load GLB (terukur)** | **24–34 s** | **~0.5–1 s** |
-| Kunjungan berikutnya | refetch (DYNAMIC) | instan (immutable) |
-
-> Angka kolom "Setelah" adalah **estimasi** berbasis scaling ukuran, bukan
-> hasil ukur. Yang sudah diverifikasi langsung: S2 (header cache — terbukti
-> `DYNAMIC`) dan S8 (berkas duplikat — md5 identik).
+Sisa: hapus entri path usang di `tsconfig.json` (M8).
 
 ---
 
-## Urutan Pengerjaan yang Disarankan
+## Hasil Akhir
 
-1. **S1 + S2** — dua ini saja sudah memangkas ~90% waktu load.
-2. **S8** — pembersihan murah, hilangkan 10 MB mati.
-3. **S4 + S5** — audio dan HDR.
-4. **S3, S6, S7** — polish.
+### Sudah terukur (per 2026-09-11)
+
+| | Sebelum | Sesudah | Catatan |
+|---|---:|---:|---|
+| Ukuran `angklung.glb` | 10.62 MB | **654 KB** (−93.8%) | S1, hasil ukur |
+| Triangle GLB | 536,812 | 9,706 | S1, hasil ukur |
+| `Model.glb` duplikat | 10.6 MB | **dihapus** | S8 |
+| Aset `/assets/*` | refetch tiap 4 jam / `DYNAMIC` | `immutable` 1 tahun | S2, verifikasi pasca-deploy |
+| **Total unduhan pengunjung baru** | **~19 MB** | **~9 MB** | hitungan dari hasil S1 |
+
+### Masih estimasi — belum dikerjakan
+
+| | Sekarang | Target | Item |
+|---|---:|---:|---|
+| Audio (14× WAV) | 4.63 MB | ~0.2 MB | S4 |
+| HDR environment | 1.5 MB | 0 / lokal ter-cache | S5 |
+| Waktu load GLB | 24–34 s | ~0.5–1 s | perlu ukur ulang pasca-deploy |
+| **Total unduhan pengunjung baru** | **~9 MB** | **~0.5–1 MB** | setelah S4 + S5 |
+
+> Baris "Sudah terukur" adalah hasil ukur langsung terhadap berkas di
+> repositori. Baris "Masih estimasi" adalah proyeksi berbasis scaling ukuran,
+> bukan hasil ukur. Total unduhan pengunjung baru ~9 MB adalah hitungan
+> aritmetika dari hasil S1 (bukan pengukuran jaringan langsung).
+
+---
+
+## Urutan Pengerjaan
+
+### Selesai
+
+1. ✅ **S1** — dedup + simplify GLB (`perf/dedup-decimate-glb`, merge #6)
+2. ✅ **S8** — hapus `Model.glb` duplikat (`chore/remove-duplicate-glb`, merge #7)
+3. ✅ **S2** — `public/_headers` (`perf/assets-cache-headers`, merge #8)
+4. ❌ **S3** — dibatalkan (meshopt merusak animasi; lihat S3)
+
+### Berikutnya
+
+5. **S4** — audio ke Opus + muat secara lazy. **Dampak terbesar yang tersisa**
+   (4.63 MB), dan sekarang berkasnya sudah ter-cache immutable berkat S2.
+6. **S5** — HDR environment (1.5 MB dari CDN pihak ketiga). Perlu diputuskan:
+   hapus, atau lokalkan.
+7. **S6** — strategi loading 3D (`preload` di module scope + code-splitting).
+8. **S7** — `frameloop="demand"` (bonus).
+9. **M8** — bersihkan entri usang di `tsconfig.json` (sisa dari S8).
+
+### Perlu diukur ulang setelah deploy
+
+- Waktu load GLB sebenarnya pada situs live (semula 24–34 s). Target ~1 s.
+- Header `cf-cache-status` untuk `/assets/*` (S2) — apakah sudah `HIT`.
+
+> Catatan urutan: S1, S8, dan S2 dikerjakan bercabang. S8 dibuat bercabang dari
+> S1, sehingga S1 harus di-merge lebih dulu; S2 independen (bercabang dari
+> `development`). Bila mengerjakan S4/S5/S6 selanjutnya, buat branch baru dari
+> `development` sesuai aturan satu-branch-per-fitur.
 
 ---
 
 ## Status
 
-Dokumen ini berisi **analisis saja** — belum ada perubahan kode yang
-dilakukan. Semua temuan bersumber dari pemeriksaan langsung terhadap situs
-live dan berkas di repositori pada 2026-09-10.
+Dokumen ini awalnya murni **analisis** (disusun 2026-09-10 dari pengukuran
+langsung terhadap situs live dan berkas di repositori). Sejak 2026-09-11
+sebagian solusinya sudah dikerjakan dan merge ke `development`.
 
-### Update 2026-09-11 — S1 dikerjakan (hasil ukur)
+### Ringkasan pengerjaan
 
-S1 dikerjakan di branch `perf/dedup-decimate-glb`. Temuan lapangan mengubah
-pendekatan dokumen ini: 83.3% byte GLB ternyata **14× geometri byte-identik**
-(md5 sama) untuk unit angklung, bukan "geometri terlalu padat" semata.
-Pipeline akhir:
+| Item | Branch | PR | Status |
+|---|---|---|---|
+| S1 — dedup + simplify GLB | `perf/dedup-decimate-glb` | #6 | ✅ merge |
+| S8 — hapus `Model.glb` | `chore/remove-duplicate-glb` | #7 | ✅ merge |
+| S2 — `public/_headers` | `perf/assets-cache-headers` | #8 | ✅ merge |
+| S3 — kompresi mesh | — | — | ❌ dibatalkan |
+| S4, S5, S6, S7, M8 | — | — | ⬜ belum |
 
-```
-dedup + simplify (--ratio 0.1 --error 0.001)
-```
+### Angka terukur
 
-Tanpa meshopt/Draco/quantize (dijelaskan di bawah). Hasil **terukur**:
+| | Sebelum | Sesudah | Item |
+|---|---:|---:|---|
+| `angklung.glb` | 10.62 MB | **654 KB** (−93.8%) | S1 |
+| Triangle GLB | 536,812 | 9,706 | S1 |
+| `Model.glb` | 10.6 MB | dihapus | S8 |
+| Total unduhan pengunjung baru | ~19 MB | **~9 MB** | S1 + S8 |
 
-| | Sebelum | Sesudah |
-|---|---:|---:|
-| Ukuran `angklung.glb` | 10.62 MB | **654 KB** (93.8% ↓) |
-| Triangle | 536,812 | 9,706 |
-| Mesh | 35 | 7 |
-| Accessor | 239 | 35 |
-| Material | 58 | 6 |
+Audio (4.63 MB) dan HDR (1.5 MB) **belum** dikerjakan, jadi keduanya masih
+menyumbang pada angka ~9 MB.
 
-Kontrak yang diverifikasi byte-level terhadap GLB asli: **35 nama node identik,
-transform T/R/S identik (diff=0), `Material.018` & `Bamboo` tetap ada**, dan
-parse headless via `three-stdlib` GLTFLoader (loader yang dipakai drei) sukses
-menghasilkan 14 node `G-Object001`..`G-Object018`.
+### Tiga hal yang perlu diketahui pembaca
 
-Catatan untuk pembaca dokumen ini:
+1. **Akar masalah GLB bukan jumlah triangle.** 83.3% isi berkas adalah 14×
+   geometri byte-identik. `dedup` (lossless) memangkas ~7.84 MB; decimation
+   hanya menyempurnakan. Lihat bagian [S1](#s1-dedup--simplify-glb--dampak-terbesar--selesai).
+2. **S3 dibatalkan karena meshopt merusak animasi.** `meshopt` memanggil
+   `quantize()`, yang membakar skala mesh ke node (naik ~15.36×) dan
+   mematahkan `pivotOffsetY` hardcoded di `AngklungModel.tsx`. Draco aman dan
+   lebih kecil (435 KB), tetapi tidak dipakai karena butuh dependensi decoder
+   + perubahan kode, sementara target ukuran sudah tercapai.
+3. **Dua verifikasi masih menggantung** dan keduanya butuh lingkungan nyata,
+   bukan analisis berkas:
+   - **Animasi 3D** (S1) — perlu dilihat mata di browser: apakah 14 angklung
+     tetap berayun saat nada dipicu. Tidak ada headless browser di repositori.
+   - **Header cache** (S2) — efek `immutable` baru terlihat setelah deploy.
+     Cek dengan `curl -sI` ke `/assets/*` dan lihat `cf-cache-status`.
 
-- **`--ratio 0.03` di S1 asli tidak berlaku.** `simplify` berjalan pada mesh
-  unik *setelah* dedup (36,778 tri), bukan pada 536K total. `0.1` = ~3,700 tri
-  per unit angklung; total akhir 9,706 tri. Angka `0.03` (≈ target 15K) di
-  dokumen ini mengukur hal yang berbeda.
-- **meshopt sengaja dihindari.** `meshopt` di gltf-transform memanggil
-  `quantize()`, yang membakar skala mesh ke node (skala node naik ~15.36×).
-  Itu mematahkan animasi `AngklungModel.tsx` (hardcode `pivotOffsetY=0.5`).
-  Karena itu tidak pakai kompresi mesh sama sekali — 654 KB sudah cukup.
-- **Verifikasi visual di browser belum dilakukan** (tidak ada headless browser
-  di repo). Yang terverifikasi: kontrak node/transform/material + parse. Yang
-  perlu mata manusia: 14 angklung tetap berayun saat nada dipicu.
-- `Model.glb` (duplikat 10 MB, M7/S8) belum dihapus — di luar scope S1.
+### Definisi "terverifikasi" di dokumen ini
+
+- **Terverifikasi** = diukur langsung dari berkas/repositori pada tanggal
+  pengerjaan (md5, jumlah accessor, diff transform, isi output build).
+- **Belum terverifikasi** = butuh deploy ke Cloudflare Pages atau pengujian
+  visual di browser, keduanya di luar jangkauan pemeriksaan berkas.
+- **Estimasi** = proyeksi berbasis scaling ukuran, ditandai eksplisit.
