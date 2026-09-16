@@ -1,53 +1,133 @@
-import { useEffect } from "react";
-import { initPiano } from "./piano";
+import React, { useState, useRef, useCallback } from "react";
 import "./style.css";
-import { Disc, Play, Square } from 'lucide-react';
+import { PianoKeyboard } from "./components/PianoKeyboard";
+import { PianoControls } from "./components/PianoControls";
+import { usePianoRecorder } from "./hooks/usePianoRecorder";
+import { usePianoShortcuts } from "./hooks/usePianoShortcuts";
 
 export default function PianoModePage() {
-  /*
-   * initPiano() butuh elemen #piano dkk sudah ada di DOM,
-   * jadi baru dipanggil setelah render (useEffect), bukan saat import.
-   */
-  useEffect(() => initPiano(), []);
+  const [sustain, setSustain] = useState(false);
+  const [activeNotes, setActiveNotes] = useState<Set<string>>(new Set());
+
+  // Track physically pressed notes to distinguish from sustained notes
+  const currentlyPressedRef = useRef<Set<string>>(new Set());
+  const sustainedNotesRef = useRef<Set<string>>(new Set());
+
+  const handleStopAllNotes = useCallback(() => {
+    currentlyPressedRef.current.clear();
+    sustainedNotesRef.current.clear();
+    setActiveNotes(new Set());
+  }, []);
+
+  const recorderRef = useRef<ReturnType<typeof usePianoRecorder> | null>(null);
+
+  const pressNote = useCallback((note: string) => {
+    if (currentlyPressedRef.current.has(note)) return;
+
+    currentlyPressedRef.current.add(note);
+
+    setActiveNotes((prev) => {
+      const next = new Set(prev);
+      next.add(note);
+      return next;
+    });
+
+    recorderRef.current?.handleNotePressRecord(note);
+
+    /*
+     * In AngklungineX:
+     * playAngklung(note);
+     */
+  }, []);
+
+  const releaseNote = useCallback(
+    (note: string) => {
+      if (!currentlyPressedRef.current.has(note)) return;
+
+      currentlyPressedRef.current.delete(note);
+      recorderRef.current?.handleNoteReleaseRecord(note);
+
+      if (sustain) {
+        sustainedNotesRef.current.add(note);
+      } else {
+        setActiveNotes((prev) => {
+          const next = new Set(prev);
+          next.delete(note);
+          return next;
+        });
+      }
+    },
+    [sustain],
+  );
+
+  const recorder = usePianoRecorder({
+    onPlayNote: (note) => {
+      setActiveNotes((prev) => new Set(prev).add(note));
+    },
+    onReleaseNote: (note) => {
+      setActiveNotes((prev) => {
+        const next = new Set(prev);
+        next.delete(note);
+        return next;
+      });
+    },
+    onStopAllNotes: handleStopAllNotes,
+  });
+
+  recorderRef.current = recorder;
+
+  const toggleSustain = useCallback(() => {
+    setSustain((prev) => {
+      const nextSustain = !prev;
+
+      // If turning sustain OFF, release all sustained notes that aren't physically held
+      if (!nextSustain) {
+        sustainedNotesRef.current.clear();
+        setActiveNotes(new Set(currentlyPressedRef.current));
+      }
+
+      return nextSustain;
+    });
+  }, []);
+
+  // Keyboard shortcut support (A-Z keys)
+  usePianoShortcuts({
+    onNotePress: pressNote,
+    onNoteRelease: releaseNote,
+  });
 
   return (
     <div className="piano-mode">
       <main className="app">
-        <header className="toolbar">
-          <div>
-            <h1>AngklungineX Piano</h1>
-          </div>
+        <header className="toolbar" />
 
-          <div className="controls">
-            <button id="sustainBtn" className="control-btn items-center">
-              Sustain
-              <span className="status">OFF</span>
-            </button>
-
-            <button id="recordBtn" className="control-btn record flex gap-3 items-center">
-              <Disc size={20} />
-              Record
-            </button>
-
-            <button id="replayBtn" className="control-btn flex gap-3 items-center">
-              <Play size={20}/>
-              Replay
-            </button>
-
-            <button id="stopBtn" className="control-btn flex gap-3 items-center">
-              <Square size={20}/>
-              Stop
-            </button>
-          </div>
-        </header>
-
-        <section className="piano-wrapper">
-          <div id="piano" className="piano"></div>
-        </section>
+        <PianoKeyboard
+          activeNotes={activeNotes}
+          onNotePress={pressNote}
+          onNoteRelease={releaseNote}
+        />
 
         <section className="info">
-          <span id="currentNote">Note: —</span>
-          <span id="recordStatus">Ready</span>
+          <PianoControls
+            sustain={sustain}
+            onToggleSustain={toggleSustain}
+            isRecording={recorder.isRecording}
+            onToggleRecord={() => {
+              if (recorder.isRecording) {
+                recorder.stopRecording();
+              } else {
+                recorder.startRecording();
+              }
+            }}
+            isReplaying={recorder.isReplaying}
+            onReplay={recorder.playReplay}
+            onStop={() => {
+              if (recorder.isRecording) {
+                recorder.stopRecording();
+              }
+              recorder.stopReplay();
+            }}
+          />
         </section>
       </main>
     </div>

@@ -17,7 +17,7 @@
   color: #fff;
 
   display: flex;
-  align-items: center;
+  align-items: end;
   justify-content: center;
 
   overflow-x: hidden;
@@ -162,11 +162,11 @@
     background 60ms ease;
 }
 
-.white-key:first-child {
+.white-key.first-key {
   border-radius: 8px 0 7px 7px;
 }
 
-.white-key:last-child {
+.white-key.last-key {
   border-radius: 0 8px 7px 7px;
 }
 
