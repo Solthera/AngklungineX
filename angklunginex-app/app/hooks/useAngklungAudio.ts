@@ -1,18 +1,18 @@
 import { useEffect, useRef } from 'react';
-import solRendah from '~/assets/angklung-14-nada/Sol-rendah-(G).wav';
-import laRendah from '~/assets/angklung-14-nada/La-rendah-(A).wav';
-import tiRendah from '~/assets/angklung-14-nada/Ti-rendah-(B).wav';
-import doNote from '~/assets/angklung-14-nada/Do-(C).wav';
-import reNote from '~/assets/angklung-14-nada/Re-(D).wav';
-import miNote from '~/assets/angklung-14-nada/Mi-(E).wav';
-import faNote from '~/assets/angklung-14-nada/Fa-(F).wav';
-import fisNote from '~/assets/angklung-14-nada/Fis-(F-sharp).wav';
-import solNote from '~/assets/angklung-14-nada/Sol-(G).wav';
-import laNote from '~/assets/angklung-14-nada/La-(A).wav';
-import tiNote from '~/assets/angklung-14-nada/Ti-(B).wav';
-import doTinggi from '~/assets/angklung-14-nada/Do-tinggi-(C).wav';
-import reTinggi from '~/assets/angklung-14-nada/Re-tinggi-(D).wav';
-import miTinggi from '~/assets/angklung-14-nada/Mi-tinggi-(E).wav';
+import solRendah from '~/assets/angklung-14-nada/Sol-rendah-(G).mp3';
+import laRendah from '~/assets/angklung-14-nada/La-rendah-(A).mp3';
+import tiRendah from '~/assets/angklung-14-nada/Ti-rendah-(B).mp3';
+import doNote from '~/assets/angklung-14-nada/Do-(C).mp3';
+import reNote from '~/assets/angklung-14-nada/Re-(D).mp3';
+import miNote from '~/assets/angklung-14-nada/Mi-(E).mp3';
+import faNote from '~/assets/angklung-14-nada/Fa-(F).mp3';
+import fisNote from '~/assets/angklung-14-nada/Fis-(F-sharp).mp3';
+import solNote from '~/assets/angklung-14-nada/Sol-(G).mp3';
+import laNote from '~/assets/angklung-14-nada/La-(A).mp3';
+import tiNote from '~/assets/angklung-14-nada/Ti-(B).mp3';
+import doTinggi from '~/assets/angklung-14-nada/Do-tinggi-(C).mp3';
+import reTinggi from '~/assets/angklung-14-nada/Re-tinggi-(D).mp3';
+import miTinggi from '~/assets/angklung-14-nada/Mi-tinggi-(E).mp3';
 
 const AUDIO_MAP: Record<string, string> = {
   'G-Object009': solRendah,

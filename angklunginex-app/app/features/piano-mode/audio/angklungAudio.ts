@@ -1,6 +1,6 @@
-import angklungC4Url from "~/assets/angklung-3-nada-c/angklung-C4.wav";
-import angklungC5Url from "~/assets/angklung-3-nada-c/angklung-C5.wav";
-import angklungC6Url from "~/assets/angklung-3-nada-c/angklung-C6.wav";
+import angklungC4Url from "~/assets/angklung-3-nada-c/angklung-C4.mp3";
+import angklungC5Url from "~/assets/angklung-3-nada-c/angklung-C5.mp3";
+import angklungC6Url from "~/assets/angklung-3-nada-c/angklung-C6.mp3";
 import { noteToMidi, isNotePlayable } from "../utils/piano-helpers";
 
 interface ActiveVoice {
