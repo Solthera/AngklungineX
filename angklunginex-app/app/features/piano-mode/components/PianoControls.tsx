@@ -1,5 +1,6 @@
 import React from "react";
-import { Disc, Play, Square } from "lucide-react";
+import { Disc, Play, Square, ChevronDown } from "lucide-react";
+import { BASE_KEY_OPTIONS } from "../utils/piano-helpers";
 
 interface PianoControlsProps {
   sustain: boolean;
@@ -9,6 +10,8 @@ interface PianoControlsProps {
   isReplaying: boolean;
   onReplay: () => void;
   onStop: () => void;
+  baseKey: string;
+  onBaseKeyChange: (key: string) => void;
 }
 
 export const PianoControls: React.FC<PianoControlsProps> = ({
@@ -19,9 +22,11 @@ export const PianoControls: React.FC<PianoControlsProps> = ({
   isReplaying,
   onReplay,
   onStop,
+  baseKey,
+  onBaseKeyChange,
 }) => {
   return (
-    <div className="controls">
+    <div className="controls items-center">
       <button
         id="sustainBtn"
         type="button"
@@ -62,7 +67,25 @@ export const PianoControls: React.FC<PianoControlsProps> = ({
         Stop
       </button>
 
-      <span className="text-neutral-400 text-sm flex items-center ml-2">Z = C4</span>
+      <div className="relative control-btn flex items-center gap-1.5 cursor-pointer text-sm font-medium select-none">
+        <span>Z =</span>
+        <span className="text-white font-semibold">{baseKey}</span>
+        <ChevronDown size={14} className="opacity-60 pointer-events-none" />
+
+        {/* Full area select so clicking anywhere on the button opens the dropdown */}
+        <select
+          id="baseKeySelect"
+          value={baseKey}
+          onChange={(e) => onBaseKeyChange(e.target.value)}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+        >
+          {BASE_KEY_OPTIONS.map((opt) => (
+            <option key={opt} value={opt} className="bg-neutral-900 text-white">
+              {opt}
+            </option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 };

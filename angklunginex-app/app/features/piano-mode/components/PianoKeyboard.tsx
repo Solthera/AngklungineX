@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { generatePianoNotes } from "../utils/piano-helpers";
+import { generatePianoNotes, isNotePlayable } from "../utils/piano-helpers";
 import { usePianoLayout } from "../hooks/usePianoLayout";
 
 interface PianoKeyboardProps {
@@ -18,17 +18,29 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>, note: string) => {
     event.preventDefault();
-    (event.currentTarget as HTMLDivElement).setPointerCapture(event.pointerId);
+    try {
+      (event.currentTarget as HTMLDivElement).setPointerCapture(event.pointerId);
+    } catch (_) {}
     onNotePress(note);
   };
 
   const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>, note: string) => {
     event.preventDefault();
+    try {
+      if ((event.currentTarget as HTMLDivElement).hasPointerCapture(event.pointerId)) {
+        (event.currentTarget as HTMLDivElement).releasePointerCapture(event.pointerId);
+      }
+    } catch (_) {}
     onNoteRelease(note);
   };
 
   const handlePointerCancel = (event: React.PointerEvent<HTMLDivElement>, note: string) => {
     event.preventDefault();
+    try {
+      if ((event.currentTarget as HTMLDivElement).hasPointerCapture(event.pointerId)) {
+        (event.currentTarget as HTMLDivElement).releasePointerCapture(event.pointerId);
+      }
+    } catch (_) {}
     onNoteRelease(note);
   };
 
@@ -44,12 +56,14 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
           const isFirst = index === 0;
           const isLast = index === whiteNotes.length - 1;
           const isActive = activeNotes.has(note.name);
+          const isPlayable = isNotePlayable(note.midi);
 
           const classNames = [
             "white-key",
             isFirst && "first-key",
             isLast && "last-key",
             isActive && "active",
+            !isPlayable && "dimmed",
           ]
             .filter(Boolean)
             .join(" ");
@@ -62,6 +76,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
               onPointerDown={(e) => handlePointerDown(e, note.name)}
               onPointerUp={(e) => handlePointerUp(e, note.name)}
               onPointerCancel={(e) => handlePointerCancel(e, note.name)}
+              onLostPointerCapture={(e) => handlePointerCancel(e, note.name)}
             >
               <span className="label">{note.name}</span>
             </div>
@@ -71,11 +86,13 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
         {/* Render Black Keys */}
         {blackNotes.map((note) => {
           const isActive = activeNotes.has(note.name);
+          const isPlayable = isNotePlayable(note.midi);
           const leftPosition = getBlackKeyLeft(note.whiteIndex);
 
           const classNames = [
             "black-key",
             isActive && "active",
+            !isPlayable && "dimmed",
           ]
             .filter(Boolean)
             .join(" ");
@@ -89,6 +106,7 @@ export const PianoKeyboard: React.FC<PianoKeyboardProps> = ({
               onPointerDown={(e) => handlePointerDown(e, note.name)}
               onPointerUp={(e) => handlePointerUp(e, note.name)}
               onPointerCancel={(e) => handlePointerCancel(e, note.name)}
+              onLostPointerCapture={(e) => handlePointerCancel(e, note.name)}
             >
               <span className="label">{note.name}</span>
             </div>

@@ -28,6 +28,8 @@ export interface RecordedNote {
 
 export const START_MIDI = 36; // C2
 export const END_MIDI = 96;   // C7
+export const PLAYABLE_START_MIDI = 60; // C4 (sample available from C4)
+export const PLAYABLE_END_MIDI = 96;   // C7
 export const KEY_PAD = 12;
 export const MIN_KEY_WIDTH = 34;
 
@@ -58,6 +60,21 @@ export function midiToNote(midi: number): string {
   const note = NOTE_NAMES[midi % 12];
   const octave = Math.floor(midi / 12) - 1;
   return `${note}${octave}`;
+}
+
+export function noteToMidi(noteName: string): number {
+  const match = noteName.match(/^([A-G]#?)(-?\d+)$/);
+  if (!match) return -1;
+  const [, note, octaveStr] = match;
+  const octave = parseInt(octaveStr, 10);
+  const noteIndex = NOTE_NAMES.indexOf(note as NoteName);
+  if (noteIndex === -1) return -1;
+  return (octave + 1) * 12 + noteIndex;
+}
+
+export function isNotePlayable(noteNameOrMidi: string | number): boolean {
+  const midi = typeof noteNameOrMidi === "number" ? noteNameOrMidi : noteToMidi(noteNameOrMidi);
+  return midi >= PLAYABLE_START_MIDI && midi <= PLAYABLE_END_MIDI;
 }
 
 export function isBlackKey(midi: number): boolean {
@@ -96,25 +113,48 @@ export function generatePianoNotes(): {
   return { allNotes, whiteNotes, blackNotes };
 }
 
-export const KEYBOARD_MAP: Record<string, string> = {
-  // C4 octave
-  z: "C4",
-  s: "C#4",
-  x: "D4",
-  d: "D#4",
-  c: "E4",
-  v: "F4",
-  g: "F#4",
-  b: "G4",
-  h: "G#4",
-  n: "A4",
-  j: "A#4",
-  m: "B4",
+export const KEY_OFFSETS: [string, number][] = [
+  ["z", 0],
+  ["s", 1],
+  ["x", 2],
+  ["d", 3],
+  ["c", 4],
+  ["v", 5],
+  ["g", 6],
+  ["b", 7],
+  ["h", 8],
+  ["n", 9],
+  ["j", 10],
+  ["m", 11],
+  [",", 12],
+  ["q", 12],
+  ["2", 13],
+  ["w", 14],
+  ["3", 15],
+  ["e", 16],
+  ["r", 17],
+  ["5", 18],
+  ["t", 19],
+  ["6", 20],
+  ["y", 21],
+  ["7", 22],
+  ["u", 23],
+  ["i", 24],
+];
 
-  // C5 octave
-  ",": "C5",
-  l: "C#5",
-  ".": "D5",
-  ";": "D#5",
-  "/": "E5",
-};
+export function getKeyboardMap(baseNote: string): Record<string, string> {
+  const baseMidi = noteToMidi(baseNote);
+  if (baseMidi === -1) return {};
+  const map: Record<string, string> = {};
+  KEY_OFFSETS.forEach(([key, offset]) => {
+    const targetMidi = baseMidi + offset;
+    if (targetMidi <= END_MIDI) {
+      map[key] = midiToNote(targetMidi);
+    }
+  });
+  return map;
+}
+
+export const BASE_KEY_OPTIONS = ["C2", "C3", "C4", "C5", "C6"];
+
+export const KEYBOARD_MAP: Record<string, string> = getKeyboardMap("C4");

@@ -172,6 +172,11 @@
 
 .white-key.active {
   /*
+   * Naikkan z-index agar bayangan dan efek 3D tidak tertindih tuts di sebelahnya
+   */
+  z-index: 5;
+
+  /*
    * "Masuk ke dalam": tuts berputar pada engsel di tepi atas
    * (transform-origin: top center di atas), jadi ujung depan
    * terbenam ~4%. perspective() ditulis inline supaya tiap tuts
@@ -199,6 +204,20 @@
   color: #555;
 
   pointer-events: none;
+}
+
+.white-key.dimmed {
+  opacity: 0.35;
+  background: #ffffff;
+}
+
+.white-key.dimmed:hover {
+  opacity: 0.45;
+}
+
+.white-key.dimmed.active {
+  background: #999;
+  opacity: 0.55;
 }
 
 /* Black key */
@@ -235,6 +254,7 @@
 }
 
 .black-key.active {
+  z-index: 15;
   transform: perspective(600px) rotateX(-6deg);
 
   background: #555;
@@ -262,6 +282,18 @@
   color: #aaa;
 
   pointer-events: none;
+}
+
+.black-key.dimmed {
+  opacity: 0.35;
+}
+
+.black-key.dimmed:hover {
+  opacity: 0.45;
+}
+
+.black-key.dimmed.active {
+  opacity: 0.55;
 }
 
 /* Info */

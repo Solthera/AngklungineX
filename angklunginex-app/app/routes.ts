@@ -4,7 +4,7 @@ export default [
   index("routes/home.tsx"),
   route("free-play", "features/free-play/free-play-page.tsx"),
   route("angklunginex", "features/angklunginex/angklunginex.tsx"),
-  route("piano-mode", "features/piano-mode/piano-mode.tsx"),
+  route("piano-mode", "features/piano-mode/piano-page.tsx"),
 
   route("*", "routes/splat.tsx"),
 ] satisfies RouteConfig;
