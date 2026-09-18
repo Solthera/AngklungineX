@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { KEY_PAD, MIN_KEY_WIDTH } from "../utils/piano-helpers";
+import { BLACK_KEY_RATIO, KEY_PAD, MIN_KEY_WIDTH } from "../utils/piano-helpers";
 
 export function usePianoLayout(totalWhiteKeys: number) {
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -41,7 +41,7 @@ export function usePianoLayout(totalWhiteKeys: number) {
 
   const getBlackKeyLeft = useCallback(
     (whiteIndex: number) => {
-      const blackWidth = keyWidth * 0.63;
+      const blackWidth = keyWidth * BLACK_KEY_RATIO;
       return whiteIndex * keyWidth - blackWidth / 2 + KEY_PAD;
     },
     [keyWidth],
