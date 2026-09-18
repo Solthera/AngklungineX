@@ -10,6 +10,7 @@ export default function PianoModePage() {
   const [sustain, setSustain] = useState(false);
   const [baseKey, setBaseKey] = useState("C5");
   const [activeNotes, setActiveNotes] = useState<Set<string>>(new Set());
+  const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false);
 
   // Track physically pressed notes to distinguish from sustained notes
   const currentlyPressedRef = useRef<Set<string>>(new Set());
@@ -145,6 +146,39 @@ export default function PianoModePage() {
 
   recorderRef.current = recorder;
 
+  // Starting a recording discards the previous take, so only ask when there is
+  // something to lose — a first recording goes straight through.
+  const handleRecordPress = useCallback(() => {
+    if (recorder.isRecording) {
+      recorder.stopRecording();
+      return;
+    }
+    if (recorder.recordedNoteCount > 0) {
+      setShowOverwriteConfirm(true);
+      return;
+    }
+    recorder.startRecording();
+  }, [recorder]);
+
+  const confirmOverwrite = useCallback(() => {
+    setShowOverwriteConfirm(false);
+    recorder.startRecording();
+  }, [recorder]);
+
+  // Escape dismisses the confirmation, matching its "Batal" button.
+  useEffect(() => {
+    if (!showOverwriteConfirm) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowOverwriteConfirm(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showOverwriteConfirm]);
+
   const toggleSustain = useCallback(() => {
     setSustain((prev) => {
       const nextSustain = !prev;
@@ -172,26 +206,54 @@ export default function PianoModePage() {
   return (
     <div className="piano-mode">
       <main className="app">
-        <header className="toolbar" />
-
+        {/* <header className="toolbar">
+        </header> */}
         <PianoKeyboard
           activeNotes={activeNotes}
           onNotePress={pressNote}
           onNoteRelease={releaseNote}
         />
 
+        <p className="pt-3 text-[#888]">{recorder.statusMessage}</p>
+
+        {showOverwriteConfirm && (
+          <div
+            className="record-confirm"
+            role="dialog"
+            aria-modal="false"
+            aria-label="Konfirmasi rekam ulang"
+          >
+            <div className="record-confirm-text">
+              <strong>
+                Rekaman lama ({recorder.recordedNoteCount} nada) akan hilang.
+              </strong>
+              <span>Lanjut merekam yang baru?</span>
+            </div>
+            <div className="record-confirm-actions">
+              <button
+                type="button"
+                className="control-btn"
+                onClick={() => setShowOverwriteConfirm(false)}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                className="control-btn destructive"
+                onClick={confirmOverwrite}
+              >
+                Hapus &amp; Rekam
+              </button>
+            </div>
+          </div>
+        )}
+
         <section className="info">
           <PianoControls
             sustain={sustain}
             onToggleSustain={toggleSustain}
             isRecording={recorder.isRecording}
-            onToggleRecord={() => {
-              if (recorder.isRecording) {
-                recorder.stopRecording();
-              } else {
-                recorder.startRecording();
-              }
-            }}
+            onToggleRecord={handleRecordPress}
             isReplaying={recorder.isReplaying}
             onReplay={recorder.playReplay}
             onStop={() => {

@@ -15,6 +15,10 @@ export function usePianoRecorder({
   const [isRecording, setIsRecording] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
   const [statusMessage, setStatusMessage] = useState("Ready");
+  // Mirrors recordedNotesRef.length so the UI can react to it — a ref alone
+  // would never re-render, leaving the Record button unable to tell an empty
+  // take from a full one.
+  const [recordedNoteCount, setRecordedNoteCount] = useState(0);
 
   const recordedNotesRef = useRef<RecordedNote[]>([]);
   const recordingStartTimeRef = useRef<number>(0);
@@ -33,6 +37,7 @@ export function usePianoRecorder({
     stopReplay();
     recordedNotesRef.current = [];
     notePressTimeMapRef.current.clear();
+    setRecordedNoteCount(0);
     recordingStartTimeRef.current = performance.now();
     setIsRecording(true);
     setStatusMessage("Recording...");
@@ -67,6 +72,7 @@ export function usePianoRecorder({
         start,
         duration,
       });
+      setRecordedNoteCount(recordedNotesRef.current.length);
     },
     [isRecording],
   );
@@ -121,6 +127,7 @@ export function usePianoRecorder({
     isRecording,
     isReplaying,
     statusMessage,
+    recordedNoteCount,
     startRecording,
     stopRecording,
     playReplay,
