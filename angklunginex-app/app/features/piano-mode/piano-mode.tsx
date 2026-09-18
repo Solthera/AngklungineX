@@ -1,15 +1,45 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, {
+  useState,
+  useRef,
+  useCallback,
+  useEffect,
+  useMemo,
+} from "react";
 import "./style.css";
 import { PianoKeyboard } from "./components/PianoKeyboard";
 import { PianoControls } from "./components/PianoControls";
+import { FallingNotes } from "./components/FallingNotes";
 import { usePianoRecorder } from "./hooks/usePianoRecorder";
 import { usePianoShortcuts } from "./hooks/usePianoShortcuts";
+import { usePianoLayout } from "./hooks/usePianoLayout";
+import { TOTAL_WHITE_KEYS } from "./utils/piano-helpers";
+import { buildFallingNotes, computePxPerMs } from "./utils/falling-notes";
 import { angklungAudio } from "./audio/angklungAudio";
 
 export default function PianoModePage() {
   const [sustain, setSustain] = useState(false);
   const [baseKey, setBaseKey] = useState("C5");
   const [activeNotes, setActiveNotes] = useState<Set<string>>(new Set());
+  const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false);
+
+  const { wrapperRef, keyWidth, getBlackKeyLeft } = usePianoLayout(TOTAL_WHITE_KEYS);
+
+  const fallLayerRef = useRef<HTMLDivElement>(null);
+
+  // Satu penulisan DOM per frame. Sengaja tanpa state: menyimpan posisi di
+  // state akan me-render ulang seluruh kotak 60x per detik.
+  //
+  // Tanda positif: buildFallingNotes menulis tepi bawah kotak di
+  // FALL_HEIGHT_PX - start * pxPerMs, sedangkan garis hit ada di
+  // FALL_HEIGHT_PX (bottom: 0 dari .fall-area). Menggeser layer ke BAWAH
+  // sebesar elapsedMs * pxPerMs membuat tepi bawah kotak bertemu garis hit
+  // tepat saat elapsedMs === start, yaitu momen nada berbunyi.
+  const handleReplayTick = useCallback((elapsedMs: number) => {
+    const layer = fallLayerRef.current;
+    if (layer) {
+      layer.style.transform = `translateY(${elapsedMs * computePxPerMs()}px)`;
+    }
+  }, []);
 
   // Track physically pressed notes to distinguish from sustained notes
   const currentlyPressedRef = useRef<Set<string>>(new Set());
@@ -141,9 +171,60 @@ export default function PianoModePage() {
       });
     },
     onStopAllNotes: handleStopAllNotes,
+    onReplayTick: handleReplayTick,
   });
 
   recorderRef.current = recorder;
+
+  // Setiap replay baru memasang kotak di posisi statisnya. Transform sisa dari
+  // replay sebelumnya harus dibersihkan sebelum frame pertama, kalau tidak
+  // kotak tampak melompat selama satu frame.
+  useEffect(() => {
+    if (fallLayerRef.current) {
+      fallLayerRef.current.style.transform = "translateY(0px)";
+    }
+  }, [recorder.replayNotes]);
+
+  // Geometri kotak hanya dihitung ulang saat timeline berubah atau saat
+  // lebar tuts berubah (resize) — bukan tiap frame. Ditempatkan setelah
+  // usePianoRecorder karena bergantung pada recorder.replayNotes.
+  const fallingNotes = useMemo(
+    () => buildFallingNotes(recorder.replayNotes, keyWidth, getBlackKeyLeft),
+    [recorder.replayNotes, keyWidth, getBlackKeyLeft],
+  );
+
+  // Starting a recording discards the previous take, so only ask when there is
+  // something to lose — a first recording goes straight through.
+  const handleRecordPress = useCallback(() => {
+    if (recorder.isRecording) {
+      recorder.stopRecording();
+      return;
+    }
+    if (recorder.recordedNoteCount > 0) {
+      setShowOverwriteConfirm(true);
+      return;
+    }
+    recorder.startRecording();
+  }, [recorder]);
+
+  const confirmOverwrite = useCallback(() => {
+    setShowOverwriteConfirm(false);
+    recorder.startRecording();
+  }, [recorder]);
+
+  // Escape dismisses the confirmation, matching its "Batal" button.
+  useEffect(() => {
+    if (!showOverwriteConfirm) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowOverwriteConfirm(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showOverwriteConfirm]);
 
   const toggleSustain = useCallback(() => {
     setSustain((prev) => {
@@ -172,26 +253,61 @@ export default function PianoModePage() {
   return (
     <div className="piano-mode">
       <main className="app">
-        <header className="toolbar" />
+        {/* <header className="toolbar">
+        </header> */}
+        <section ref={wrapperRef} className="piano-wrapper">
+          <div className="piano-stage">
+            <FallingNotes notes={fallingNotes} layerRef={fallLayerRef} />
+            <PianoKeyboard
+              activeNotes={activeNotes}
+              onNotePress={pressNote}
+              onNoteRelease={releaseNote}
+              keyWidth={keyWidth}
+              getBlackKeyLeft={getBlackKeyLeft}
+            />
+          </div>
+        </section>
 
-        <PianoKeyboard
-          activeNotes={activeNotes}
-          onNotePress={pressNote}
-          onNoteRelease={releaseNote}
-        />
+        <p className="pt-3 text-[#888]">{recorder.statusMessage}</p>
+
+        {showOverwriteConfirm && (
+          <div
+            className="record-confirm"
+            role="dialog"
+            aria-modal="false"
+            aria-label="Konfirmasi rekam ulang"
+          >
+            <div className="record-confirm-text">
+              <strong>
+                Rekaman lama ({recorder.recordedNoteCount} nada) akan hilang.
+              </strong>
+              <span>Lanjut merekam yang baru?</span>
+            </div>
+            <div className="record-confirm-actions">
+              <button
+                type="button"
+                className="control-btn"
+                onClick={() => setShowOverwriteConfirm(false)}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                className="control-btn destructive"
+                onClick={confirmOverwrite}
+              >
+                Hapus &amp; Rekam
+              </button>
+            </div>
+          </div>
+        )}
 
         <section className="info">
           <PianoControls
             sustain={sustain}
             onToggleSustain={toggleSustain}
             isRecording={recorder.isRecording}
-            onToggleRecord={() => {
-              if (recorder.isRecording) {
-                recorder.stopRecording();
-              } else {
-                recorder.startRecording();
-              }
-            }}
+            onToggleRecord={handleRecordPress}
             isReplaying={recorder.isReplaying}
             onReplay={recorder.playReplay}
             onStop={() => {

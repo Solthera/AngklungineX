@@ -33,6 +33,10 @@ export const PLAYABLE_END_MIDI = 96;   // C7
 export const KEY_PAD = 12;
 export const MIN_KEY_WIDTH = 34;
 
+/** Rasio lebar tuts hitam terhadap tuts putih. Harus sama dengan
+ *  `--black-w: calc(var(--key-w) * 0.63)` di style.css. */
+export const BLACK_KEY_RATIO = 0.63;
+
 export const NOTE_NAMES: NoteName[] = [
   "C",
   "C#",
@@ -158,3 +162,8 @@ export function getKeyboardMap(baseNote: string): Record<string, string> {
 export const BASE_KEY_OPTIONS = ["C2", "C3", "C4", "C5", "C6"];
 
 export const KEYBOARD_MAP: Record<string, string> = getKeyboardMap("C4");
+
+/** Jumlah tuts putih pada keyboard (C2–C7). Dihitung sekali saat modul dimuat.
+ *  Ditempatkan setelah definisi BLACK_NOTES/NOTE_NAMES karena
+ *  generatePianoNotes() membacanya — sebelum baris ini keduanya masih di TDZ. */
+export const TOTAL_WHITE_KEYS = generatePianoNotes().whiteNotes.length;

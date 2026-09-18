@@ -5,25 +5,53 @@ interface UsePianoRecorderProps {
   onPlayNote: (note: string) => void;
   onReleaseNote: (note: string) => void;
   onStopAllNotes: () => void;
+  onReplayTick?: (elapsedMs: number) => void;
 }
 
 export function usePianoRecorder({
   onPlayNote,
   onReleaseNote,
   onStopAllNotes,
+  onReplayTick,
 }: UsePianoRecorderProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [isReplaying, setIsReplaying] = useState(false);
   const [statusMessage, setStatusMessage] = useState("Ready");
+  // Mirrors recordedNotesRef.length so the UI can react to it — a ref alone
+  // would never re-render, leaving the Record button unable to tell an empty
+  // take from a full one.
+  const [recordedNoteCount, setRecordedNoteCount] = useState(0);
 
   const recordedNotesRef = useRef<RecordedNote[]>([]);
   const recordingStartTimeRef = useRef<number>(0);
   const notePressTimeMapRef = useRef<Map<string, number>>(new Map());
-  const replayTimersRef = useRef<number[]>([]);
+  const replayRafRef = useRef<number | null>(null);
+  const replayClockRef = useRef<number>(0);
+  const sortedNotesRef = useRef<RecordedNote[]>([]);
+  const nextPressIdxRef = useRef(0);
+  const soundingRef = useRef<{ note: string; endMs: number }[]>([]);
+
+  // Timeline yang sedang diputar, diangkat ke state supaya visualizer bisa
+  // menggambar kotak. Berubah dua kali per replay (mulai & selesai), jadi
+  // tidak memicu render per frame.
+  const [replayNotes, setReplayNotes] = useState<RecordedNote[]>([]);
+
+  // Callback disimpan di ref supaya jam rAF tidak perlu dipasang ulang tiap
+  // render, dan tidak pernah menyentuh callback basi.
+  const onReplayTickRef = useRef(onReplayTick);
+  useEffect(() => {
+    onReplayTickRef.current = onReplayTick;
+  }, [onReplayTick]);
 
   const stopReplay = useCallback(() => {
-    replayTimersRef.current.forEach((timer) => clearTimeout(timer));
-    replayTimersRef.current = [];
+    if (replayRafRef.current !== null) {
+      cancelAnimationFrame(replayRafRef.current);
+      replayRafRef.current = null;
+    }
+    sortedNotesRef.current = [];
+    nextPressIdxRef.current = 0;
+    soundingRef.current = [];
+    setReplayNotes([]);
     setIsReplaying(false);
     onStopAllNotes();
     setStatusMessage("Stopped");
@@ -33,6 +61,7 @@ export function usePianoRecorder({
     stopReplay();
     recordedNotesRef.current = [];
     notePressTimeMapRef.current.clear();
+    setRecordedNoteCount(0);
     recordingStartTimeRef.current = performance.now();
     setIsRecording(true);
     setStatusMessage("Recording...");
@@ -67,6 +96,7 @@ export function usePianoRecorder({
         start,
         duration,
       });
+      setRecordedNoteCount(recordedNotesRef.current.length);
     },
     [isRecording],
   );
@@ -81,39 +111,80 @@ export function usePianoRecorder({
     setIsReplaying(true);
     setStatusMessage("Replaying...");
 
-    const notes = recordedNotesRef.current;
+    // Diurutkan naik berdasarkan waktu BUNYI (start = momen tekan).
+    const sorted = [...recordedNotesRef.current].sort((a, b) => a.start - b.start);
+    sortedNotesRef.current = sorted;
+    setReplayNotes(sorted);
+    nextPressIdxRef.current = 0;
+    soundingRef.current = [];
+    replayClockRef.current = performance.now();
 
-    notes.forEach((recorded) => {
-      const pressTimer = window.setTimeout(() => {
+    const tick = () => {
+      const elapsedMs = performance.now() - replayClockRef.current;
+
+      // 1. Bunyikan semua nada yang sudah jatuh tempo. `while`, bukan `if`:
+      //    satu frame bisa melewati beberapa nada sekaligus.
+      while (
+        nextPressIdxRef.current < sorted.length &&
+        sorted[nextPressIdxRef.current].start <= elapsedMs
+      ) {
+        const recorded = sorted[nextPressIdxRef.current];
         onPlayNote(recorded.note);
+        // Satu suara per nada. Map di recorder tidak bisa menghasilkan dua
+        // nada sama yang tumpang tindih, tapi data dari MIDI nanti bisa —
+        // dan dua entri untuk satu nada akan memicu dua rilis.
+        if (!soundingRef.current.some((v) => v.note === recorded.note)) {
+          soundingRef.current.push({
+            note: recorded.note,
+            endMs: recorded.start + recorded.duration,
+          });
+        }
+        nextPressIdxRef.current++;
+      }
 
-        const releaseTimer = window.setTimeout(() => {
-          onReleaseNote(recorded.note);
-        }, recorded.duration);
+      // 2. Lepas nada yang durasinya sudah habis.
+      if (soundingRef.current.length > 0) {
+        const masihBerbunyi: { note: string; endMs: number }[] = [];
+        for (const voice of soundingRef.current) {
+          if (voice.endMs <= elapsedMs) {
+            onReleaseNote(voice.note);
+          } else {
+            masihBerbunyi.push(voice);
+          }
+        }
+        soundingRef.current = masihBerbunyi;
+      }
 
-        replayTimersRef.current.push(releaseTimer);
-      }, recorded.start);
+      // 3. Beri tahu visualizer pada frame yang sama — satu jam untuk
+      //    audio dan animasi, jadi keduanya tidak bisa saling melenceng.
+      onReplayTickRef.current?.(elapsedMs);
 
-      replayTimersRef.current.push(pressTimer);
-    });
+      // 4. Selesai hanya bila semua nada sudah dibunyikan DAN tidak ada
+      //    yang masih berbunyi.
+      if (
+        nextPressIdxRef.current >= sorted.length &&
+        soundingRef.current.length === 0
+      ) {
+        replayRafRef.current = null;
+        setIsReplaying(false);
+        setReplayNotes([]);
+        setStatusMessage("Replay finished");
+        return;
+      }
 
-    const totalDuration = Math.max(
-      ...notes.map((n) => n.start + n.duration),
-    );
+      replayRafRef.current = requestAnimationFrame(tick);
+    };
 
-    const finishTimer = window.setTimeout(() => {
-      setIsReplaying(false);
-      setStatusMessage("Replay finished");
-    }, totalDuration + 100);
-
-    replayTimersRef.current.push(finishTimer);
+    replayRafRef.current = requestAnimationFrame(tick);
   }, [stopReplay, onPlayNote, onReleaseNote]);
 
-  // Clean up all timeouts on unmount
+  // Bersihkan jam rAF saat unmount agar tidak ada frame yang tertinggal.
   useEffect(() => {
     return () => {
-      replayTimersRef.current.forEach((timer) => clearTimeout(timer));
-      replayTimersRef.current = [];
+      if (replayRafRef.current !== null) {
+        cancelAnimationFrame(replayRafRef.current);
+        replayRafRef.current = null;
+      }
     };
   }, []);
 
@@ -121,6 +192,8 @@ export function usePianoRecorder({
     isRecording,
     isReplaying,
     statusMessage,
+    recordedNoteCount,
+    replayNotes,
     startRecording,
     stopRecording,
     playReplay,
